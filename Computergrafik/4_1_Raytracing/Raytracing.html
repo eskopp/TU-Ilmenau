@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <script>
+      var light1 = { x: 110, y: 210 }; // the position of the light (begin of the ray)
+      var matBeg = { x: 120, y: 100 }; // the "begin" of the material line
+      var matEnd = { x: 250, y: 120 }; // the "end"   of the material line
+      var pts = [light1, matBeg, matEnd]; // array of pickable/draggable points
+
+      var epPointRadius = 4; // radius for drawing points
+      var epDragRadius = 8; // radius for picking/dragging pooints
+      var currDragPt = null;
+
+      function hypot(dx, dy) {
+        return Math.sqrt(dx * dx + dy * dy);
+      }
+
+      function getPickedPt(mX, mY) {
+        // takes simply the first pointwhich is near enough
+        for (var idx = 0; idx < pts.length; idx++)
+          if (hypot(pts[idx].x - mX, pts[idx].y - mY) < epDragRadius)
+            return pts[idx];
+        return null;
+      }
+
+      function getPosXY_OmS(el) {
+        // Such a function is usefull, if the canvas is part of
+        var xPos = 0; // a complex html page with scrolled elements.
+        var yPos = 0;
+        while (el) {
+          xPos += el.offsetLeft - el.scrollLeft; //  + el.clientLeft;
+          yPos += el.offsetTop - el.scrollTop; //  + el.clientTop ;
+          el = el.offsetParent;
+        }
+        return [xPos, yPos];
+      }
+
+      function getEventPosXY(ev, el) {
+        var posXY = getPosXY_OmS(el);
+        return [ev.clientX - posXY[0], el.height - (ev.clientY - posXY[1])];
+      }
+
+      function handleDown(ev, cnv) {
+        if (window.event) ev = window.event; // e.g. for old IE
+
+        var posXY = getEventPosXY(ev, cnv);
+
+        var mX = posXY[0];
+        var mY = posXY[1];
+        currDragPt = getPickedPt(mX, mY);
+      }
+
+      function handleUp(ev, cnv) {
+        currDragPt = null;
+      }
+
+      function handleMove(ev, cnv) {
+        if (window.event) ev = window.event; // e.g. for old IE
+
+        var posXY = getEventPosXY(ev, cnv);
+        var mX = posXY[0];
+        var mY = posXY[1];
+        var dbg1 = document.getElementById("dbg1");
+        if (dbg1) dbg1.innerHTML = "mouse:" + mX + ", " + mY + "<br>";
+
+        if (!currDragPt) return;
+
+        currDragPt.x = mX;
+        currDragPt.y = mY;
+
+        redraw(cnv);
+      }
+
+      function redraw(cnv) {
+        var ctx = cnv.getContext("2d");
+        if (!ctx) return;
+
+        // 1. calculate positions of dependent points
+        doCalc();
+
+        // 2. clear canvas
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0); // set identity matrix
+        ctx.clearRect(0, 0, cnv.width, cnv.height);
+
+        // 3. draw lines
+        ctx.strokeStyle = "blue";
+        ctx.beginPath();
+        ctx.moveTo(matBeg.x, cnv.height - matBeg.y);
+        ctx.lineTo(matEnd.x, cnv.height - matEnd.y);
+        ctx.stroke();
+
+        // 4. draw text
+        ctx.font = "bold 16px Arial";
+        ctx.fillText("light 1", light1.x + 5, light1.y - 5);
+
+        // 5. draw all points
+        ctx.fillStyle = "black";
+        for (var idx = 0; idx < pts.length; idx++) {
+          ctx.beginPath();
+          ctx.arc(
+            pts[idx].x,
+            cnv.height - pts[idx].y,
+            epPointRadius,
+            0,
+            2 * Math.PI,
+            false
+          );
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      function doCalc() {
+        var dbg2 = document.getElementById("dbg2");
+        if (dbg2) dbg2.innerHTML = "numPts:" + pts.length + "<br>";
+
+        // ...
+      }
+
+      function initScene() {
+        // code placed here will be executed when the html-page is loaded completely
+        redraw(document.getElementById("theCanvas"));
+        // ...
+      }
+    </script>
+  </head>
+  <body onload="initScene()">
+    <div style="position: relative; float: left; padding-right: 10px">
+      <canvas
+        id="theCanvas"
+        width="400px"
+        height="400px"
+        onmousedown="handleDown(event, this);"
+        onmouseup="handleUp  (event, this);"
+        onmousemove="handleMove(event, this);"
+        style="border: black solid 1px"
+      ></canvas>
+    </div>
+    <div style="position: relative; float: left; width: 600px">
+      <h3>"Ray to point"-exercise skeleton</h3>
+      <b>Your tasks:</b>
+      <ol>
+        <li>
+          Drag the 3 points and look what happens.<br />
+          Fix the buggy position of the text for light 1.
+        </li>
+        <li>
+          Introduce the midpoint (named matMid) of the material, i.e.:
+          <ul>
+            <li>
+              Place in doCalc() code, which updates the position of matMid
+              between matBeg and matEnd.
+            </li>
+            <li>
+              Place the point in the points array, so that it is automatically
+              drawn in the redraw function.
+            </li>
+          </ul>
+        </li>
+
+        <li>
+          Add in the redraw-function a line from light1 to matMid and add a
+          label "ray in" for this ray.
+        </li>
+        <li>
+          Introduce a point for the end of the material normal (named matNrm)
+          and implement its calculation and the normal visualisation.
+        </li>
+        <li>
+          Draw a ray which shows the ideal reflection. It shall be 100 pixels
+          long and marked with the label "ray out".
+        </li>
+        <li>
+          Hide the 2 rays and their labels if the light is behind the material.
+        </li>
+      </ol>
+      <div id="dbg1"></div>
+      <br />
+      <div id="dbg2"></div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>OBJ-Viewer, WebGL (CG22/23 V1)</title>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <meta name="author" content="TU-Ilmenau, 2022-10-11" />
+
+    <style>
+      body {
+        background-color: #eeeeee;
+      }
+      canvas {
+        background-color: #ffffff;
+        border: 1px solid black;
+        display: block;
+      }
+    </style>
+
+    <script type="text/javascript">
+      // ------------------------------------------------------------------------------------------------
+      //      General math functions
+      // ------------------------------------------------------------------------------------------------
+
+      function degToRad(deg) {
+        // convert degree to radiant (allows definition in degrees for better readability)
+        return (deg * Math.PI) / 180;
+      }
+
+      function roundIt(val, dig) {
+        try {
+          let fact = Math.pow(10, dig);
+          return Math.round(val * fact) / fact;
+        } catch (e) {
+          return val;
+        }
+      }
+
+      function num2Str(v, w) {
+        let s = (v >= 0 ? " " : "") + v;
+        while (s.length < w) s += " ";
+        return s;
+      }
+
+      function r3(v) {
+        let d = 3;
+        return num2Str(roundIt(v, d), d + 3);
+      }
+
+      // ------------------------------------------------------------------------------------------------
+      //      General debug functions
+      // ------------------------------------------------------------------------------------------------
+      function mtx4ToStr(m, pre) {
+        let s = "  ";
+        return (
+          pre +
+          r3(m[0]) +
+          s +
+          r3(m[4]) +
+          s +
+          r3(m[8]) +
+          s +
+          r3(m[12]) +
+          "\n" +
+          pre +
+          r3(m[1]) +
+          s +
+          r3(m[5]) +
+          s +
+          r3(m[9]) +
+          s +
+          r3(m[13]) +
+          "\n" +
+          pre +
+          r3(m[2]) +
+          s +
+          r3(m[6]) +
+          s +
+          r3(m[10]) +
+          s +
+          r3(m[14]) +
+          "\n" +
+          pre +
+          r3(m[3]) +
+          s +
+          r3(m[7]) +
+          s +
+          r3(m[11]) +
+          s +
+          r3(m[15]) +
+          "\n"
+        );
+      }
+
+      // ------------------------------------------------------------------------------------------------
+      //      Vector and Matrix stuff
+      // ------------------------------------------------------------------------------------------------
+      function subVec3(a, b) {
+        return [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+      }
+      function dotVec3(a, b) {
+        return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+      }
+
+      function nrmVec3(a) {
+        // normalize the length of a vector with x, y, and z coordinate -> make it to 1
+        let l = Math.sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]); // that is the current length
+        return l == 0 ? a : [a[0] / l, a[1] / l, a[2] / l]; //
+      }
+
+      function crossV3(a, b) {
+        return [
+          a[1] * b[2] - a[2] * b[1],
+          a[2] * b[0] - a[0] * b[2],
+          a[0] * b[1] - a[1] * b[0],
+        ];
+      }
+
+      function yRotMtx4(aglRad) {
+        // rotation around the y axis in homogeneous coordinates
+        let sa = Math.sin(aglRad);
+        let ca = Math.cos(aglRad);
+        return new Float32Array([
+          ca,
+          0,
+          -sa,
+          0, // Note that this is a column major notation of the array. This "apparently transposed" version is the same as described as in the slides!
+          0,
+          1,
+          0,
+          0,
+          sa,
+          0,
+          ca,
+          0,
+          0,
+          0,
+          0,
+          1,
+        ]);
+      }
+
+      function newMtx4() {
+        return new Float32Array(16);
+      }
+
+      function perspective(fovRadWidth, aspectRatioW2H, near, far) {
+        // the angle fovRadWidth is given for full height, when we calculate xmax we must use only the half angle
+        var xmax = near * Math.tan(fovRadWidth / 2); // -> use half angle in radiant;  tan=dx/dz -> dx=dz*tan
+        var ymax = xmax / aspectRatioW2H;
+        return perspective_projectionPyramidFromOriginInNegZDirection(
+          -xmax,
+          xmax,
+          -ymax,
+          ymax,
+          near,
+          far
+        );
+      }
+
+      function perspective_projectionPyramidFromOriginInNegZDirection(
+        xmin,
+        xmax,
+        ymin,
+        ymax,
+        near,
+        far
+      ) {
+        let ret = newMtx4();
+        let dx = xmax - xmin,
+          dy = ymax - ymin,
+          dz = far - near;
+
+        ret[0] = (2 * near) / dx;
+        ret[4] = 0;
+        ret[8] = (xmax + xmin) / dx;
+        ret[12] = 0;
+        ret[1] = 0;
+        ret[5] = (2 * near) / dy;
+        ret[9] = (ymax + ymin) / dy;
+        ret[13] = 0;
+        ret[2] = 0;
+        ret[6] = 0;
+        ret[10] = -(near + far) / dz;
+        ret[14] = (-2 * far * near) / dz;
+        ret[3] = 0;
+        ret[7] = 0;
+        ret[11] = -1;
+        ret[15] = 0;
+
+        return ret;
+      }
+
+      // We do not use the classical lookAt matrix, which would have to be inverted before using it as view matrix. => we use lookAtInv instead!
+      // function lookAt(cam, vAt, vUp){  // all 3 vectors (camera position (=eye), look to and the view up vector) are cartesian coords
+      //     let zAx = nrmVec3(subVec3(cam, vAt));
+      //     let xAx = nrmVec3(crossV3(vUp, zAx));
+      //     let yAx = nrmVec3(crossV3(zAx, xAx));
+      //
+      //     return new Float32Array(            // note: for WebGL we need the column major order
+      //            [xAx[0], xAx[1], xAx[2], 0,  // vec to right
+      //             yAx[0], yAx[1], yAx[2], 0,  // vec up
+      //             zAx[0], zAx[1], zAx[2], 0,  // vec into the sceen (in this direction we are looking to)
+      //             cam[0], cam[1], cam[2], 1]);// would move pts in the origin into the cam
+      // }
+
+      function lookAtInv(cam, vAt, vUp) {
+        // all 3 vectors (camera position (=eye), look to and the view up vector) are cartesian coords
+        let zAx = nrmVec3(subVec3(cam, vAt));
+        let xAx = nrmVec3(crossV3(vUp, zAx));
+        let yAx = nrmVec3(crossV3(zAx, xAx));
+
+        return new Float32Array([ // note: for WebGL we need the column major order
+          xAx[0],
+          yAx[0],
+          zAx[0],
+          0, // vec to right
+          xAx[1],
+          yAx[1],
+          zAx[1],
+          0, // vec up
+          xAx[2],
+          yAx[2],
+          zAx[2],
+          0, // vec into the sceen (in this direction we are looking to)
+          -dotVec3(cam, xAx),
+          -dotVec3(cam, yAx),
+          -dotVec3(cam, zAx),
+          1,
+        ]); // this moves the cam into the origin (within the camera coord. system -> uses projections onto camera axes)
+      }
+
+      // ------------------------------------------------------------------------------------------------
+      //      WebGL stuff
+      // ------------------------------------------------------------------------------------------------
+
+      function addLineNum(txt) {
+        let r = "";
+        let a = txt.split("\n");
+        for (let i = 0; i < a.length; i++) r += i + 1 + ": " + a[i] + "\n";
+        return r;
+      }
+
+      function compileSource(ctx, src, type) {
+        let shader = ctx.createShader(type);
+        ctx.shaderSource(shader, src);
+        ctx.compileShader(shader);
+        if (ctx.getShaderParameter(shader, ctx.COMPILE_STATUS)) return shader;
+        console.log(
+          "compile error: " +
+            ctx.getShaderInfoLog(shader) +
+            " for:\n" +
+            addLineNum(src)
+        );
+        ctx.deleteShader(shader);
+      }
+
+      function compileShader(ctx, vtxSrc, frgSrc) {
+        let program = ctx.createProgram();
+        ctx.attachShader(
+          program,
+          compileSource(ctx, vtxSrc, ctx.VERTEX_SHADER)
+        );
+        ctx.attachShader(
+          program,
+          compileSource(ctx, frgSrc, ctx.FRAGMENT_SHADER)
+        );
+        ctx.linkProgram(program);
+        if (!ctx.getProgramParameter(program, ctx.LINK_STATUS)) {
+          console.log("link error: " + ctx.getProgramInfoLog(program));
+          this.ctx.deleteProgram(program);
+        }
+
+        let locMap = {};
+        locMap.u_vecToLight = ctx.getUniformLocation(program, "u_vecToLight");
+        locMap.u_diffuseCol = ctx.getUniformLocation(program, "u_diffuseCol");
+        locMap.u_modlMtx = ctx.getUniformLocation(program, "u_modlMtx");
+        locMap.u_viewMtx = ctx.getUniformLocation(program, "u_viewMtx");
+        locMap.u_projMtx = ctx.getUniformLocation(program, "u_projMtx");
+        locMap.a_vtxPos = ctx.getAttribLocation(program, "a_vtxPos");
+        locMap.a_vtxNrm = ctx.getAttribLocation(program, "a_vtxNrm");
+        return { prog: program, locs: locMap };
+      }
+
+      function initAttributeBuffers(ctx, dat) {
+        // create attribute buffers for the positions and normals + store the number of vertices (=coords/3)
+        let ret = { vtxNum: dat.posArr.length / 3 }; // e.g. cube: 108 coords -> 36 vertices, 6 per side (2 triangles per side)
+
+        ret.vtx = ctx.createBuffer(); // we fill it soon with the coordinates of the triangles
+        ctx.bindBuffer(ctx.ARRAY_BUFFER, ret.vtx);
+        ctx.bufferData(ctx.ARRAY_BUFFER, dat.posArr, ctx.STATIC_DRAW); // transfer into the buffer
+
+        ret.nrm = ctx.createBuffer(); // we fill it soon with the normals of the triangles
+        ctx.bindBuffer(ctx.ARRAY_BUFFER, ret.nrm);
+        ctx.bufferData(ctx.ARRAY_BUFFER, dat.nrmArr, ctx.STATIC_DRAW); // transfer into the buffer
+
+        ctx.bindBuffer(ctx.ARRAY_BUFFER, null); // unbind again
+        return ret;
+      }
+
+      // ------------------------------------------------------------------------------------------------
+      //      OBJ Parser stuff
+      // ------------------------------------------------------------------------------------------------
+
+      // OBJ is in general a quite complex/powerful format, see e.g.:
+      //      http://paulbourke.net/dataformats/obj
+      // Nevertheless many programs use a subset of the defined commands, e.g. to define
+      // more or less simple planar 3D models.
+      // The following code defines a (very) simple OBJ parser, which is able to read
+      // OBJ models defined by vertices (v), vertex normals (vn) and faces (f).
+
+      function parseOBJ(objTxt) {
+        // in the following 2 arrays we collect the vertex positions and normals, index 0 is simply the origin
+        const vtxArr = [[0, 0, 0]]; // the vertex array
+        const nrmArr = [[0, 0, 0]]; // the normal array
+        const vtxCoo = [];
+        const nrmCoo = [];
+
+        function addVertex(vtxDat) {
+          // we assume data in the form: vtxPos//nrmPos; the texture position is not used
+          let idxStrs = vtxDat.split("/");
+          let vtxIdx = parseInt(idxStrs[0]);
+          let nrmIdx = parseInt(idxStrs[2]);
+          if (vtxIdx <= 0 || vtxIdx > vtxArr.length)
+            console.warn(
+              "bad vertex index " + vtxIdx + " in line " + lineNo + " : " + line
+            );
+          if (nrmIdx <= 0 || nrmIdx > nrmArr.length)
+            console.warn(
+              "bad normal index " + nrmIdx + " in line " + lineNo + " : " + line
+            );
+          vtxCoo.push(...vtxArr[vtxIdx]);
+          nrmCoo.push(...nrmArr[nrmIdx]);
+        }
+
+        const handlerMap = {
+          // function names are equal to the OBJ commands; the parameters are stored
+          v(paramStrArr) {
+            vtxArr.push(paramStrArr.map(parseFloat));
+          }, // map string array to float array and append it to vtxArr
+          vn(paramStrArr) {
+            nrmArr.push(paramStrArr.map(parseFloat));
+          }, // map string array to float array and append it to nrmArr
+          f(paramStrArr) {
+            // store the face (polygon) as triangle or triangle fan
+            const numTriangles = paramStrArr.length - 2; // 3 pts -> 1 triangle; 4 pts -> 2 triangles ...
+            for (let tri = 0; tri < numTriangles; tri++) {
+              // pick up 3 points from the parameter array for the current triangle
+              addVertex(paramStrArr[0]); // the first point is part of all triangles
+              addVertex(paramStrArr[tri + 1]); // note: the following points may be used twice
+              addVertex(paramStrArr[tri + 2]); //       e.g.: polygon:ABCDE -> ABC, ACD, ADE (3 triangles)
+            }
+          },
+        };
+
+        const objCmdRegEx = /(v|vn|f)\s+(.*)/; // the supported commands followed by one or more spaces, the rest are parameters
+        const lines = objTxt.split("\n");
+        for (let lineNo = 0; lineNo < lines.length; lineNo++) {
+          const line = lines[lineNo].trim();
+          if (line == "" || line.startsWith("#"))
+            // skip empty lines and commend lines
+            continue;
+
+          const mtc = objCmdRegEx.exec(line); // check if the current line matches the regular expression
+          if (!mtc) {
+            console.warn(
+              "unknown and unhandled obj command in line " +
+                lineNo +
+                " : " +
+                line
+            );
+            continue;
+          }
+          // call the handler function defined ty the command name, all the parameters becomes parameter of the function
+          handlerMap[mtc[1]](mtc[2].split(/\s+/)); // mtc[1] is the command name,
+          // mtc[2] is the parameters (we provide them as array of strings)
+        }
+
+        return {
+          posArr: new Float32Array(vtxCoo), // to be used in WebGL draw calls we need typed arrays like these
+          nrmArr: new Float32Array(nrmCoo),
+        };
+      }
+
+      // ------------------------------------------------------------------------------------------------
+
+      function drawCooSys() {
+        const cnv = document.getElementById("canvas2d");
+        const ctx = cnv.getContext("2d");
+        if (!ctx) {
+          // without such a context we can not sketch in 2d
+          document.write(
+            "Your browser does not support 2d canvas!\n We stop the viewer app now."
+          );
+          return;
+        }
+        ctx.canvas.width = cnv.width; // synchronize the current html canvas parameters with the parameters of the context
+        ctx.canvas.height = cnv.height;
+
+        let w = cnv.width;
+        let h = cnv.height;
+
+        ctx.strokeStyle = "black";
+        ctx.lineWidth = 1;
+
+        ctx.translate(0.5, 0.5);
+        ctx.beginPath();
+        ctx.moveTo(0, h / 2);
+        ctx.lineTo(w, h / 2);
+        ctx.moveTo(w / 2, 0);
+        ctx.lineTo(w / 2, h);
+        ctx.stroke();
+
+        ctx.fillStyle = "white";
+        ctx.beginPath();
+        ctx.arc(w / 2, h / 2, 7, 0, 360);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = "black";
+        ctx.beginPath();
+        ctx.arc(w / 2, h / 2, 2, 0, 360);
+        ctx.fill();
+
+        ctx.beginPath();
+        let dx = 14;
+        let dy = 5;
+        ctx.moveTo(w, h / 2);
+        ctx.lineTo(w - dx, h / 2 - dy / 2);
+        ctx.lineTo(w - dx, h / 2 + dy);
+        ctx.closePath();
+        ctx.moveTo(w / 2, 0);
+        ctx.lineTo(w / 2 - dy / 2, dx);
+        ctx.lineTo(w / 2 + dy / 2, dx);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.font = "15px Arial";
+        ctx.fillText("x", w - 12, h / 2 + 13);
+        ctx.fillText("y", w / 2 + 8, +10);
+        ctx.fillText("z", w / 2 - 16, h / 2 + 12);
+      }
+
+      function init() {
+        const cnv = document.getElementById("canvas3d");
+        const ctx = cnv.getContext("webgl");
+        if (!ctx) {
+          // without a WebGL context we can not draw with hardware support
+          document.write(
+            "Your browser does not support WebGL!\n We stop the viewer app now."
+          );
+          return;
+        }
+        ctx.canvas.width = cnv.width; // synchronize the current html canvas parameters with the parameters of the context
+        ctx.canvas.height = cnv.height;
+
+        drawCooSys();
+
+        // ------------------------------------------------------------------------------------------------
+        //      Vertex shader
+        // ------------------------------------------------------------------------------------------------
+        //      Note: all the text between the two ` chars is stored as string in the vtxShader constant.
+
+        const vtxShader = `
+                attribute vec4 a_vtxPos;        //  the 3d vertex position as >>>homogeneous<<< coordinates
+                attribute vec3 a_vtxNrm;        //  the normal for the vertex (in a certain polygon/trinagle)
+
+                uniform mat4 u_modlMtx;         //  input: model matrix
+                uniform mat4 u_viewMtx;         //  input: view matrix
+                uniform mat4 u_projMtx;         //  input: projection matrix
+
+                varying vec3 v_normal;          //  output: normal in world coordinates (input for the fragment shader)
+
+                void main() {                   //  shader code, which is executed for each vertex
+                    gl_Position = u_projMtx * u_viewMtx * u_modlMtx * a_vtxPos; // matrix and vector multiplications -> vec4
+                    v_normal = mat3(u_modlMtx) * a_vtxNrm;                      // the current normal of the vertex  -> vec3 (in world coords)  
+                }
+            `;
+
+        // ------------------------------------------------------------------------------------------------
+        //      Fragment shader
+        // ------------------------------------------------------------------------------------------------
+        //      Note: all the text between the two ` chars is stored as string in the frgShader constant.
+
+        const frgShader = `
+                precision mediump float;
+
+                varying vec3 v_normal;      // input: the current normal of the vertex in world coords. (interpolated based on vertex normals)
+                uniform vec4 u_diffuseCol;  // input: diffuse color
+                uniform vec3 u_vecToLight;  // input: direction of the light, here parallel light is assumed (infinite distance)
+
+                void main () {                  //  shader code, which is executed for each fragment (pixel)
+                    vec3 nrm = normalize(v_normal);                                     // the interpolated normal for this pixel
+                    float internsity = dot(u_vecToLight, nrm) * .5 + .5;                // estimation of a quite plausible lighting
+                    gl_FragColor = vec4(u_diffuseCol.rgb * internsity, u_diffuseCol.a); // final RGBA-color of the pixel
+                }
+            `;
+
+        // ------------------------------------------------------------------------------------------------
+        //      The default OBJ model
+        // ------------------------------------------------------------------------------------------------
+
+        const objData_cube = `
+                # A simple cube defined by:
+                #  - 8 vertices (v),
+                #  - 8 normals (vn) and
+                #  - 6 faces (f) which reference v and vn.
+
+                v  1.0  1.0 -1.0
+                v  1.0 -1.0 -1.0
+                v  1.0  1.0  1.0
+                v  1.0 -1.0  1.0
+                v -1.0  1.0 -1.0
+                v -1.0 -1.0 -1.0
+                v -1.0  1.0  1.0
+                v -1.0 -1.0  1.0
+
+                vn  0.0  1.0  0.0
+                vn  0.0  0.0  1.0
+                vn -1.0  0.0  0.0
+                vn  0.0 -1.0  0.0
+                vn  1.0  0.0  0.0
+                vn  0.0  0.0 -1.0
+
+                f 1//1 5//1 7//1 3//1
+                f 4//2 3//2 7//2 8//2
+                f 8//3 7//3 5//3 6//3
+                f 6//4 2//4 4//4 8//4
+                f 2//5 1//5 3//5 4//5
+                f 6//6 5//6 1//6 2//6
+            `;
+
+        const objData_house = `
+                # A simple house defined by:
+                #  - 14 vertices (v),
+                #  - 7 normals (vn) and
+                #  - 9 faces (f) which reference v and vn.
+
+                v  1.0 -1.6  1.0
+                v  1.0  0.4  1.0
+                v  1.5  0.4  1.0
+                v  0.0  1.6  1.0
+                v -1.5  0.4  1.0
+                v -1.0  0.4  1.0
+                v -1.0 -1.6  1.0
+                v  1.0 -1.6 -1.0
+                v  1.0  0.4 -1.0
+                v  1.5  0.4 -1.0
+                v  0.0  1.6 -1.0
+                v -1.5  0.4 -1.0
+                v -1.0  0.4 -1.0
+                v -1.0 -1.6 -1.0
+                
+                vn  0.0  0.0  1.0
+                vn  0.0  0.0 -1.0
+                vn  1.0  0.0  0.0
+                vn  0.0 -1.0  0.0
+                vn  1.0  1.0  0.0
+                vn -1.0  1.0  0.0
+                vn -1.0  0.0  0.0
+
+                f  2//1  3//1  4//1  5//1  6//1  7//1  1//1 
+                f 13//2 12//2 11//2 10//2  9//2  8//2 14//2 
+                f  1//3  8//3  9//3  2//3 
+                f  2//4  9//4 10//4  3//4
+                f  3//5 10//5 11//5  4//5
+                f  4//6 11//6 12//6  5//6
+                f  5//4 12//4 13//4  6//4
+                f  6//7 13//7 14//7  7//7
+                f  7//4 14//4  8//4  1//4                
+            `;
+
+        // ------------------------------------------------------------------------------------------------
+        //      Init WebGL
+        // ------------------------------------------------------------------------------------------------
+        ctx.enable(ctx.DEPTH_TEST); // ensure that faces in the front hide faces in the back (may be important for a set of objects)
+        ctx.enable(ctx.CULL_FACE); // allows backface culling to find inconsistencies in the model
+
+        const wglPrgDat = compileShader(ctx, vtxShader, frgShader);
+        const wglBufDat = initAttributeBuffers(ctx, parseOBJ(objData_cube));
+
+        const cameraTo = [0, 0, 0];
+        const cameraPos = [0, 0, 5];
+        const viewUp = [0, 1, 0];
+        const zNear = 0.1;
+        const zFar = 100;
+
+        function doRenderStep(timeMs) {
+          // requestAnimationFrame provides time in milliseconds
+          let time = timeMs / 1000; // time in seconds (used for animation)
+
+          // 1. calculate some matrices (may be controlled by time)
+          const modlMtx = yRotMtx4(time); // rotate the model over the time
+          const viewMtx = lookAtInv(cameraPos, cameraTo, viewUp); // view matrix: puts the model / the world into camera coordinates
+          const fovRad = degToRad(60); // field of view in radians (a parameter of the projection)
+          const aspW2H = ctx.canvas.width / ctx.canvas.height; // aspect ratio (width to height, a parameter of the projection)
+          const projMtx = perspective(fovRad, aspW2H, zNear, zFar); // the projection matrix (3D -> 2D)
+
+          // 2. activate the shader program and set the shader parameters (some vectors and matrices)
+          ctx.useProgram(wglPrgDat.prog);
+          ctx.uniform3fv(wglPrgDat.locs.u_vecToLight, nrmVec3([2, 3, 7]));
+          ctx.uniform4fv(wglPrgDat.locs.u_diffuseCol, [1, 0.9, 0.3, 1]);
+          ctx.uniformMatrix4fv(wglPrgDat.locs.u_modlMtx, false, modlMtx);
+          ctx.uniformMatrix4fv(wglPrgDat.locs.u_viewMtx, false, viewMtx);
+          ctx.uniformMatrix4fv(wglPrgDat.locs.u_projMtx, false, projMtx);
+
+          // 3. bind the model data arrays (vertex positions and normals)
+          ctx.bindBuffer(ctx.ARRAY_BUFFER, wglBufDat.vtx);
+          ctx.enableVertexAttribArray(wglPrgDat.locs.a_vtxPos);
+          ctx.vertexAttribPointer(
+            wglPrgDat.locs.a_vtxPos,
+            3,
+            ctx.FLOAT,
+            false,
+            0,
+            0
+          ); // use 3 coordinates per vertex
+
+          ctx.bindBuffer(ctx.ARRAY_BUFFER, wglBufDat.nrm);
+          ctx.enableVertexAttribArray(wglPrgDat.locs.a_vtxNrm);
+          ctx.vertexAttribPointer(
+            wglPrgDat.locs.a_vtxNrm,
+            3,
+            ctx.FLOAT,
+            false,
+            0,
+            0
+          ); // use 3 coordinates per vertex
+
+          // 4. draw the model using the shaders
+          ctx.drawArrays(ctx.TRIANGLES, 0, wglBufDat.vtxNum);
+
+          // 5. clean up shader stuff
+          ctx.bindBuffer(ctx.ARRAY_BUFFER, null);
+          ctx.disableVertexAttribArray(wglBufDat.vtx);
+          ctx.disableVertexAttribArray(wglBufDat.nrm);
+
+          // 6. continue animation until our watchdog stops it
+          if (time < 6)
+            // increase the animation time in case you are cold and need some extra heating from your device;-)
+            requestAnimationFrame(doRenderStep);
+          else
+            console.log(
+              "The animation was stopped by a watchdog. Reload the page to start it again."
+            );
+        }
+
+        requestAnimationFrame(doRenderStep);
+      }
+    </script>
+  </head>
+  <body onload="init();">
+    <h3>OBJ-Viewer (WebGL)</h3>
+    <div style="position: relative">
+      <canvas
+        id="canvas2d"
+        width="80"
+        height="80"
+        style="
+          position: absolute;
+          left: 0;
+          top: 0;
+          z-index: 1;
+          opacity: 0.5;
+          border: 0px;
+        "
+      ></canvas>
+      <canvas
+        id="canvas3d"
+        width="300"
+        height="300"
+        style="position: absolute; left: 0; top: 0; z-index: 0"
+      ></canvas>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Chessboard Artefacts</title>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <meta name="author" content="TU-Ilmenau, 2022-11-08" />
+    <script type="text/javascript">
+      // data used in slides 2-1
+      // let chessBoard = {dx:4, dy:1, x0:0, y0:0, isC1: function(x, y) { return posMod((x-this.x0)/this.dx, 2) < 1 == posMod((y-this.y0)/this.dy, 2) < 1; }};
+      // let camera = {xyz:[ 0, 0, 3], dir:[0, 1, -1], up:[0, 0, 1], d:1 };
+
+      let chessBoard = {
+        dx: 4,
+        dy: 1,
+        x0: 0,
+        y0: 0,
+        isC1: function (x, y) {
+          return (
+            posMod((x - this.x0) / this.dx, 2) < 1 ==
+            posMod((y - this.y0) / this.dy, 2) < 1
+          );
+        },
+      };
+      let camera = { xyz: [0, 0, 3], dir: [0, 1, -1], up: [0, 0, 1], d: 1 };
+
+      function posMod(n, d) {
+        let m = n % d;
+        return m >= 0 ? m : d + m;
+      }
+
+      function limVal(v, mi, ma) {
+        v *= 1;
+        return v <= mi ? mi : v >= ma ? ma : v;
+      }
+
+      function nrmVec3(a) {
+        // normalization of vector a       ,  returns a with lenght=1
+        let l = Math.sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]);
+        return l == 0 ? a : [a[0] / l, a[1] / l, a[2] / l];
+      }
+      function lenVec3(a) {
+        return Math.sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]);
+      } // calculation of the length of vector a
+
+      function crossProd(vec1, vec2) {
+        // cross product of 2 vectors
+        return [
+          vec1[1] * vec2[2] - vec1[2] * vec2[1],
+          vec1[2] * vec2[0] - vec1[0] * vec2[2],
+          vec1[0] * vec2[1] - vec1[1] * vec2[0],
+        ];
+      }
+
+      function calcRgbForRay(rayPnt, rayDir) {
+        // We assume that the chess board is in the xy plane.
+        // 1) for an intersection the ray must have neg. dz for pos. pz (and vice versa).
+        if (rayDir[2] * rayPnt[2] >= 0) return [0, 0, 1]; // assume "blue sky" as background
+
+        // 2) calc the coordinates where the ray intersects the xy plane (has z==0)
+        let x = rayPnt[0] + (rayDir[0] / rayDir[2]) * rayPnt[2];
+        let y = rayPnt[1] + (rayDir[1] / rayDir[2]) * rayPnt[2];
+
+        // 3) sample chess board at x,y
+        return chessBoard.isC1(x, y) ? [0, 0, 0] : [1, 1, 1];
+      }
+
+      function calcRgbForPixel(xPix, yPix, cnv) {
+        // 1) calc normalized xy-coords (are within the range -1..+1)
+        let xn = ((xPix + 0.5) / cnv.width) * 2 - 1;
+        let yn = ((yPix + 0.5) / cnv.height) * 2 - 1;
+
+        // 2) calc a ray from camera pos to each "camera pixel"
+        let d = camera.d; // allows zooming (controlling the field of view)
+        let camDir = nrmVec3(camera.dir);
+        let camUp = nrmVec3(camera.up);
+        let camRgt = nrmVec3(crossProd(camDir, camUp));
+        camera.up = nrmVec3(crossProd(camRgt, camDir));
+
+        let rx = camDir[0] * d + camRgt[0] * xn + camUp[0] * yn;
+        let ry = camDir[1] * d + camRgt[1] * xn + camUp[1] * yn;
+        let rz = camDir[2] * d + camRgt[2] * xn + camUp[2] * yn;
+
+        // 2. send the ray into the scene
+        let rayDir = nrmVec3([rx, ry, rz]);
+
+        return calcRgbForRay(camera.xyz, rayDir);
+      }
+
+      function redraw(cnv) {
+        cnv || (cnv = document.getElementById("theCanvas"));
+        if (!cnv) return;
+        var ctx = cnv.getContext("2d");
+        if (!ctx) return;
+
+        // draw the pixels
+        ctx.save();
+        let imgData = ctx.createImageData(cnv.width, cnv.height);
+        let iPtr = 0;
+        for (let y = cnv.height - 1; y >= 0; y--) {
+          for (let x = 0; x < cnv.width; x++) {
+            let rgb = false
+              ? [
+                  x / cnv.width,
+                  y / cnv.height,
+                  1 - (x * y) / cnv.width / cnv.height,
+                ]
+              : calcRgbForPixel(x, y, cnv);
+            imgData.data[iPtr++] = rgb[0] * 255;
+            imgData.data[iPtr++] = rgb[1] * 255;
+            imgData.data[iPtr++] = rgb[2] * 255;
+            imgData.data[iPtr++] = 255;
+          }
+        }
+        ctx.putImageData(imgData, 0, 0); // saves 20..25% compared to fill an rect area
+
+        ctx.restore();
+      }
+
+      function initScene() {
+        valuesToInpts();
+        redraw();
+      }
+
+      var ignoreInpChg = false;
+      function handleInputChg() {
+        if (ignoreInpChg) return;
+        // read current values and ensure that they did not left their range
+        let inp;
+        inp = document.getElementById("dx");
+        if (inp) chessBoard.dx = limVal(inp.value, 1, 100);
+        inp = document.getElementById("dy");
+        if (inp) chessBoard.dy = limVal(inp.value, 1, 100);
+        inp = document.getElementById("x0");
+        if (inp) chessBoard.x0 = limVal(inp.value, -100, 100);
+        inp = document.getElementById("y0");
+        if (inp) chessBoard.y0 = limVal(inp.value, -100, 100);
+        inp = document.getElementById("d");
+        if (inp) camera.d = limVal(inp.value, -100, 100);
+        inp = document.getElementById("vx");
+        if (inp) camera.dir[0] = limVal(inp.value, -100, 100);
+        inp = document.getElementById("vy");
+        if (inp) camera.dir[1] = limVal(inp.value, -100, 100);
+        inp = document.getElementById("pz");
+        if (inp) camera.xyz[2] = limVal(inp.value, -100, 100);
+
+        valuesToInpts(); // may be we had to map a value into its limits -> updating now all
+        redraw();
+      }
+
+      function valuesToInpts() {
+        // Write the current values in the inputs.
+        ignoreInpChg = true;
+        let inp;
+        inp = document.getElementById("dx");
+        if (inp) inp.value = chessBoard.dx;
+        inp = document.getElementById("dy");
+        if (inp) inp.value = chessBoard.dy;
+        inp = document.getElementById("x0");
+        if (inp) inp.value = chessBoard.x0;
+        inp = document.getElementById("y0");
+        if (inp) inp.value = chessBoard.y0;
+        inp = document.getElementById("d");
+        if (inp) inp.value = camera.d;
+        inp = document.getElementById("vx");
+        if (inp) inp.value = camera.dir[0];
+        inp = document.getElementById("vy");
+        if (inp) inp.value = camera.dir[1];
+        inp = document.getElementById("pz");
+        if (inp) inp.value = camera.xyz[2];
+        ignoreInpChg = false;
+      }
+    </script>
+  </head>
+
+  <body onload="initScene()">
+    <h4>Alias-Effekte beim Samplen eines Schachbrettmusters</h4>
+    <div style="display: inline-block">
+      <canvas
+        id="theCanvas"
+        width="256"
+        height="256"
+        style="border: black solid 1px"
+      ></canvas>
+    </div>
+
+    dx:<input
+      id="dx"
+      type="number"
+      style="width: 4em"
+      step=".1"
+      oninput="handleInputChg()"
+    />
+    dy:<input
+      id="dy"
+      type="number"
+      style="width: 4em"
+      step=".1"
+      oninput="handleInputChg()"
+    />
+    x0:<input
+      id="x0"
+      type="number"
+      style="width: 4em"
+      step=".1"
+      oninput="handleInputChg()"
+    />
+    y0:<input
+      id="y0"
+      type="number"
+      style="width: 4em"
+      step=".1"
+      oninput="handleInputChg()"
+    />
+    d:<input
+      id="d"
+      type="number"
+      style="width: 4em"
+      step=".1"
+      oninput="handleInputChg()"
+    />
+    vx:<input
+      id="vx"
+      type="number"
+      style="width: 4em"
+      step=".1"
+      oninput="handleInputChg()"
+    />
+    vy:<input
+      id="vy"
+      type="number"
+      style="width: 4em"
+      step=".1"
+      oninput="handleInputChg()"
+    />
+    pz:<input
+      id="pz"
+      type="number"
+      style="width: 4em"
+      step=".1"
+      oninput="handleInputChg()"
+    />
+  </body>
+</html>

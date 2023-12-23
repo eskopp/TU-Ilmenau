@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <meta name="author" content="TU-Ilmenau, 2022-10-18">
+    <title>Perspective Calculator (Canvas 2d)</title>
+    <style type="text/css">
+        body {
+            background-color: #DDD;
+        }
+
+        h1 {
+            color: blue;
+        }
+
+        p {
+            color: red;
+        }
+
+        th {
+            font-size: 90%
+        }
+
+        span {
+            font-weight: normal
+        }
+
+        input[type="number"] {
+            width: 50px;
+        }
+
+        input[readonly] {
+            width: 30px;
+        }
+
+        .cooInp {
+            width: 50px;
+        }
+    </style>
+</head>
+
+<body onload="mainInit()">
+    <table width="100%" border="0">
+        <tr valign="top">
+            <td width="500">
+                <canvas width="400" height="400" id="canvas2d"></canvas>
+            </td>
+            <td align="left">
+                <table border="0">
+                    <tr>
+                        <td colspan="14">
+                            <span style="font-weight:bold; font-size:130%">3D to 2D: Perspective Calculator</span><br>
+                            <span style="font-size:70%">We start with a cube and a parallel projection. If you want to
+                                see changes
+                                you may change values using the widgets or change the code snippet.
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th colspan="4"></th>
+                        <th colspan="1"> </th>
+                        <th colspan="1">P<sub>0</sub></th>
+                        <th colspan="1">P<sub>1</sub></th>
+                        <th colspan="1">P<sub>2</sub></th>
+                        <th colspan="1">P<sub>3</sub></th>
+                        <th colspan="1">P<sub>4</sub></th>
+                        <th colspan="1">P<sub>5</sub></th>
+                        <th colspan="1">P<sub>6</sub></th>
+                        <th colspan="1">P<sub>7</sub></th>
+                        <th colspan="1"> </th>
+
+                    </tr>
+                    <tr>
+                        <td colspan="4" valign="bottom" style="font-size:90%">
+                            <input type="range" id="rotX" value="0" min="-90" max="90" oninput="rot_inputChg()"> rotX =
+                            <span id="valRotX">0</span>°<br>
+                            <input type="range" id="rotY" value="0" min="-90" max="90" oninput="rot_inputChg()"> rotY =
+                            <span id="valRotY">0</span>°<br>
+                            <input type="range" id="rotZ" value="0" min="-90" max="90" oninput="rot_inputChg()"> rotZ =
+                            <span id="valRotZ">0</span>°<br>
+                            Projection Matrix
+                        </td>
+                        <td style="line-height:1.5"> x:<br>y:<br>z:<br>w: </label> </td>
+                        <td>
+                            <input type="number" name="objMtxC[]" value="1.5" min="-9" max="9" step="0.1"
+                                oninput="objMtx_inputChg()"> <br>
+                            <input type="number" name="objMtxC[]" value="0" min="-9" max="9" step="0.1"
+                                oninput="objMtx_inputChg()"> <br>
+                            <input type="number" name="objMtxC[]" value="0" min="-9" max="9" step="0.1"
+                                oninput="objMtx_inputChg()"> <br>
+                            <input type="text" name="objMtxC[]" value="1" readonly> <br>
+                        </td>
+                        <td>
+                            <input type="number" name="objMtxC[]" value="0" min="-9" max="9" step="0.1"
+                                oninput="objMtx_inputChg()"> <br>
+                            <input type="number" name="objMtxC[]" value="0" min="-9" max="9" step="0.1"
+                                oninput="objMtx_inputChg()"> <br>
+                            <input type="number" name="objMtxC[]" value="0" min="-9" max="9" step="0.1"
+                                oninput="objMtx_inputChg()"> <br>
+                            <input type="text" name="objMtxC[]" value="1" readonly> <br>
+                        </td>
+                        <td>
+                            <input type="number" name="objMtxC[]" value="0" min="-9" max="9" step="0.1"
+                                oninput="objMtx_inputChg()"> <br>
+                            <input type="number" name="objMtxC[]" value="0" min="-9" max="9" step="0.1"
+                                oninput="objMtx_inputChg()"> <br>
+                            <input type="number" name="objMtxC[]" value="0" min="-9" max="9" step="0.1"
+                                oninput="objMtx_inputChg()"> <br>
+                            <input type="text" name="objMtxC[]" value="1" readonly> <br>
+                        </td>
+                        <td>
+                            <input type="number" name="objMtxC[]" value="0" min="-9" max="9" step="0.1"
+                                oninput="objMtx_inputChg()"> <br>
+                            <input type="number" name="objMtxC[]" value="0" min="-9" max="9" step="0.1"
+                                oninput="objMtx_inputChg()"> <br>
+                            <input type="number" name="objMtxC[]" value="0" min="-9" max="9" step="0.1"
+                                oninput="objMtx_inputChg()"> <br>
+                            <input type="text" name="objMtxC[]" value="1" readonly> <br>
+                        </td>
+                        <td>
+                            <input type="number" name="objMtxC[]" value="0" min="-9" max="9" step="0.1"
+                                oninput="objMtx_inputChg()"> <br>
+                            <input type="number" name="objMtxC[]" value="0" min="-9" max="9" step="0.1"
+                                oninput="objMtx_inputChg()"> <br>
+                            <input type="number" name="objMtxC[]" value="0" min="-9" max="9" step="0.1"
+                                oninput="objMtx_inputChg()"> <br>
+                            <input type="text" name="objMtxC[]" value="1" readonly> <br>
+                        </td>
+                        <td>
+                            <input type="number" name="objMtxC[]" value="0" min="-9" max="9" step="0.1"
+                                oninput="objMtx_inputChg()"> <br>
+                            <input type="number" name="objMtxC[]" value="0" min="-9" max="9" step="0.1"
+                                oninput="objMtx_inputChg()"> <br>
+                            <input type="number" name="objMtxC[]" value="0" min="-9" max="9" step="0.1"
+                                oninput="objMtx_inputChg()"> <br>
+                            <input type="text" name="objMtxC[]" value="1" readonly> <br>
+                        </td>
+                        <td>
+                            <input type="number" name="objMtxC[]" value="0" min="-9" max="9" step="0.1"
+                                oninput="objMtx_inputChg()"> <br>
+                            <input type="number" name="objMtxC[]" value="0" min="-9" max="9" step="0.1"
+                                oninput="objMtx_inputChg()"> <br>
+                            <input type="number" name="objMtxC[]" value="0" min="-9" max="9" step="0.1"
+                                oninput="objMtx_inputChg()"> <br>
+                            <input type="text" name="objMtxC[]" value="1" readonly> <br>
+                        </td>
+                        <td>
+                            <input type="number" name="objMtxC[]" value="0" min="-9" max="9" step="0.1"
+                                oninput="objMtx_inputChg()"> <br>
+                            <input type="number" name="objMtxC[]" value="0" min="-9" max="9" step="0.1"
+                                oninput="objMtx_inputChg()"> <br>
+                            <input type="number" name="objMtxC[]" value="0" min="-9" max="9" step="0.1"
+                                oninput="objMtx_inputChg()"> <br>
+                            <input type="text" name="objMtxC[]" value="1" readonly> <br>
+                        </td>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <input type="number" name="prjMtxC[]" value="1" min="-9" max="9" step="0.05"
+                    oninput="prjMtx_inputChg()"><br>
+                <input type="number" name="prjMtxC[]" value="0" min="-9" max="9" step="0.05"
+                    oninput="prjMtx_inputChg()"><br>
+                <input type="number" name="prjMtxC[]" value="0" min="-9" max="9" step="0.05"
+                    oninput="prjMtx_inputChg()"><br>
+                <input type="number" name="prjMtxC[]" value="0" min="-9" max="9" step="0.05"
+                    oninput="prjMtx_inputChg()"><br>
+            </td>
+            <td>
+                <input type="number" name="prjMtxC[]" value="0" min="-9" max="9" step="0.05"
+                    oninput="prjMtx_inputChg()"><br>
+                <input type="number" name="prjMtxC[]" value="1" min="-9" max="9" step="0.05"
+                    oninput="prjMtx_inputChg()"><br>
+                <input type="number" name="prjMtxC[]" value="0" min="-9" max="9" step="0.05"
+                    oninput="prjMtx_inputChg()"><br>
+                <input type="number" name="prjMtxC[]" value="0" min="-9" max="9" step="0.05"
+                    oninput="prjMtx_inputChg()"><br>
+            </td>
+            <td>
+                <input type="number" name="prjMtxC[]" value="0" min="-9" max="9" step="0.05"
+                    oninput="prjMtx_inputChg()"><br>
+                <input type="number" name="prjMtxC[]" value="0" min="-9" max="9" step="0.05"
+                    oninput="prjMtx_inputChg()"><br>
+                <input type="number" name="prjMtxC[]" value="1" min="-9" max="9" step="0.05"
+                    oninput="prjMtx_inputChg()"><br>
+                <input type="number" name="prjMtxC[]" value="0" min="-9" max="9" step="0.05"
+                    oninput="prjMtx_inputChg()"><br>
+            </td>
+            <td>
+                <input type="number" name="prjMtxC[]" value="0" min="-9" max="9" step="0.05"
+                    oninput="prjMtx_inputChg()"><br>
+                <input type="number" name="prjMtxC[]" value="0" min="-9" max="9" step="0.05"
+                    oninput="prjMtx_inputChg()"><br>
+                <input type="number" name="prjMtxC[]" value="0" min="-9" max="9" step="0.05"
+                    oninput="prjMtx_inputChg()"><br>
+                <input type="number" name="prjMtxC[]" value="1" min="-9" max="9" step="0.05"
+                    oninput="prjMtx_inputChg()"><br>
+            </td>
+            <td> <label align="center"> </label> </td>
+            <td>
+                <input type="text" name="imgMtxC[]" value="0" readonly><br>
+                <input type="text" name="imgMtxC[]" value="0" readonly><br>
+                <input type="text" name="imgMtxC[]" value="0" readonly><br>
+                <input type="text" name="imgMtxC[]" value="1" readonly><br>
+            </td>
+            <td>
+                <input type="text" name="imgMtxC[]" value="0" readonly><br>
+                <input type="text" name="imgMtxC[]" value="0" readonly><br>
+                <input type="text" name="imgMtxC[]" value="0" readonly><br>
+                <input type="text" name="imgMtxC[]" value="1" readonly><br>
+            </td>
+            <td>
+                <input type="text" name="imgMtxC[]" value="0" readonly><br>
+                <input type="text" name="imgMtxC[]" value="0" readonly><br>
+                <input type="text" name="imgMtxC[]" value="0" readonly><br>
+                <input type="text" name="imgMtxC[]" value="1" readonly><br>
+            </td>
+            <td>
+                <input type="text" name="imgMtxC[]" value="0" readonly><br>
+                <input type="text" name="imgMtxC[]" value="0" readonly><br>
+                <input type="text" name="imgMtxC[]" value="0" readonly><br>
+                <input type="text" name="imgMtxC[]" value="1" readonly><br>
+            </td>
+            <td>
+                <input type="text" name="imgMtxC[]" value="0" readonly><br>
+                <input type="text" name="imgMtxC[]" value="0" readonly><br>
+                <input type="text" name="imgMtxC[]" value="0" readonly><br>
+                <input type="text" name="imgMtxC[]" value="1" readonly><br>
+            </td>
+            <td>
+                <input type="text" name="imgMtxC[]" value="0" readonly><br>
+                <input type="text" name="imgMtxC[]" value="0" readonly><br>
+                <input type="text" name="imgMtxC[]" value="0" readonly><br>
+                <input type="text" name="imgMtxC[]" value="1" readonly><br>
+            </td>
+            <td>
+                <input type="text" name="imgMtxC[]" value="0" readonly><br>
+                <input type="text" name="imgMtxC[]" value="0" readonly><br>
+                <input type="text" name="imgMtxC[]" value="0" readonly><br>
+                <input type="text" name="imgMtxC[]" value="1" readonly><br>
+            </td>
+            <td>
+                <input type="text" name="imgMtxC[]" value="0" readonly><br>
+                <input type="text" name="imgMtxC[]" value="0" readonly><br>
+                <input type="text" name="imgMtxC[]" value="0" readonly><br>
+                <input type="text" name="imgMtxC[]" value="1" readonly><br>
+            </td>
+            <!--<th> <label align ="center"> &larr; Result  </label> </th>-->
+        </tr>
+        <tr>
+            <th colspan="4"> </th>
+            <th colspan="1"> </th>
+            <th colspan="1">P<sub>0</sub>'</th>
+            <th colspan="1">P<sub>1</sub>'</th>
+            <th colspan="1">P<sub>2</sub>'</th>
+            <th colspan="1">P<sub>3</sub>'</th>
+            <th colspan="1">P<sub>4</sub>'</th>
+            <th colspan="1">P<sub>5</sub>'</th>
+            <th colspan="1">P<sub>6</sub>'</th>
+            <th colspan="1">P<sub>7</sub>'</th>
+            <th colspan="1"> </th>
+
+        </tr>
+        <tr>
+            <td colspan="6" style="padding-top:1em">
+                <b>JS-Code for the definition of the projection matrix</b><br>
+                <span style="font-size:70%"><b>Note</b>: The matrix must be <a
+                        href="https://en.wikipedia.org/w/index.php?title=Row-_and_column-major_order&oldid=1038592542">column
+                        major</a>!<br>
+                    <textarea id="prjMtxJsCodeText" rows="17" cols="20"></textarea>
+                    <input type="button" onclick="loadNow_jsDefinitionForPrjMtx=true; calcAndShow()"
+                        value="Load JS-Code"></input>
+            </td>
+            <td colspan="8" style="padding-top:1em">
+                <b>Note:</b> Changes of a parameter below will load the according matrix automatically.<br>
+                <input type="button" onclick="loadNow_prjMtx_unity()" value="unity"
+                    title="Load unity matrix as into projection matrix"></input><br>
+                <input type="button" onclick="loadNow_prjMtx_paral()" value="paral"
+                    title="Load parallel projection into projection matrix"></input>
+                &nbsp; &alpha; = <input type="number" id="prjParaA" value="30" min="-90" max="90" step="1.0"
+                    oninput="prjMtx_paramChg(1);">
+                &nbsp; f = <input type="number" id="prjParaF" value="0.5" min="-20" max="20" step="0.1"
+                    oninput="prjMtx_paramChg(2);"><br>
+                <input type="button" onclick="loadNow_prjMtx_persp()" value="persp"
+                    title="Load perspective projection into projection matrix"></input>
+                &nbsp; d = <input type="number" id="prjParaD" value="-3" min="-20" max="20" step="0.1"
+                    oninput="prjMtx_paramChg(3);"><br>
+
+            </td>
+        </tr>
+    </table>
+    </td>
+    </tr>
+    </table>
+
+    <script>
+        // get HTML elements
+        var objMtxCells = document.getElementsByName('objMtxC[]');
+        var prjMtxCells = document.getElementsByName('prjMtxC[]');
+        var imgMtxCells = document.getElementsByName('imgMtxC[]');
+        var prjMtxJsCode = document.getElementById('prjMtxJsCodeText');
+
+
+        // ======================================================================================================
+        //     Matrix-stuff
+        // ======================================================================================================
+        // column major 3x3      column major 4x4
+        //   0  3  6               0  4   8  12
+        //   1  4  7               1  5   9  13
+        //   2  5  8               2  6  10  14
+        //                         3  7  11  15
+
+        class MyMat extends Array {
+            constructor(inValues) {
+                super();
+                if (typeof inValues !== 'undefined') {
+                    this.push(...inValues);     // spread syntax to push all elements (and not the array itself)
+                    this.dim = Math.sqrt(this.length) | 0;
+                }
+                else
+                    this.dim = 0;
+            }
+
+            static getIdentity(d) {
+                switch (d) {
+                    case 2: return new MyMat([1, 0, 0, 1]);
+                    case 3: return new MyMat([1, 0, 0, 0, 1, 0, 0, 0, 1]);
+                    case 4: return new MyMat([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+                    default: return new MyMat([1]);
+                }
+            }
+
+            setValues(inValues) {
+                this.splice(0);                 // remove all old values
+                if (typeof inValues !== 'undefined') {
+                    this.push(...inValues);     // spread syntax to push all elements (and not the array itself)
+                    this.dim = Math.sqrt(this.length) | 0;
+                }
+                this.dim = 0;
+            }
+
+            getValues() {
+                return this.values();
+            }
+
+            mulPoint(p) {
+                let d = this.dim;
+                let r = [];
+                for (let i = 0; i < d; i++) {
+                    let a = this[0 + i] * p[0];
+                    for (let j = 1; j < d; j++)
+                        a += this[d * j + i] * p[j];
+                    r.push(a);
+                };
+                return r;
+            }
+
+            mulMat(m) {
+                let d = m.dim; // must be equal to (or less) this.length/this.dim
+                let r = new MyMat();
+
+                for (let k = 0; k < m.length; k += d)
+                    for (let i = 0; i < d; i++) {
+                        let a = this[0 + i] * m[k];
+                        for (let j = 1; j < d; j++)
+                            a += this[d * j + i] * m[k + j];
+                        r.push(a);
+                    };
+
+                r.dim = m.dim;
+                return r;
+            }
+
+            hom2car() {
+                let d = this.dim; // must be equal to (or less) this.length/this.dim
+                let r = new MyMat();
+                for (let i = 0; i < this.length; i += d) {
+                    let w = this[i + d - 1];
+                    for (let j = 0; j < d; j++)
+                        r.push(this[i + j] / (w == 0 ? 1 : w));
+                };
+                r.dim = this.dim;
+                return r;
+            }
+        }
+
+        // ======================================================================================================
+        //     Calculations / interaction handling
+        // ======================================================================================================
+        var loadNow_jsDefinitionForPrjMtx = false;
+
+        function mainInit() {
+
+            loadNow_prjMtx_paral(false); // prjMtx_inputChg(false);
+            rot_inputChg(false);
+
+            let oPts = blockPts();
+            for (let i = 0, o = 0; i < oPts.length; i++) {
+                objMtxCells[o++].value = oPts[i];
+                if (i % 3 == 2)
+                    objMtxCells[o++].value = 1; // homog. coord.
+            }
+
+            calcAndShow();
+        }
+
+        var mtxRotX; // = new MyMat();
+        var mtxRotY; // = new MyMat();
+        var mtxRotZ; // = new MyMat();
+
+        function rot_inputChg(doShow = true) {
+            let rx = document.getElementById("rotX").value; document.getElementById("valRotX").innerHTML = rx;
+            let ry = document.getElementById("rotY").value; document.getElementById("valRotY").innerHTML = ry;
+            let rz = document.getElementById("rotZ").value; document.getElementById("valRotZ").innerHTML = rz;
+
+            rx *= Math.PI / 180;
+            ry *= Math.PI / 180;
+            rz *= Math.PI / 180;
+
+            mtxRotX = new MyMat([1, 0, 0, 0, 0, Math.cos(rx), Math.sin(rx), 0, 0, -Math.sin(rx), Math.cos(rx), 0, 0, 0, 0, 1]);
+            mtxRotY = new MyMat([Math.cos(ry), 0, -Math.sin(ry), 0, 0, 1, 0, 0, Math.sin(ry), 0, Math.cos(ry), 0, 0, 0, 0, 1]);
+            mtxRotZ = new MyMat([Math.cos(rz), Math.sin(rz), 0, 0, -Math.sin(rz), Math.cos(rz), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+
+            if (doShow)
+                calcAndShow();
+        }
+
+        function objMtx_inputChg(doShow = true) {
+            if (doShow)
+                calcAndShow();
+        }
+
+        function prjMtx_inputChg(doShow = true) {
+            // 1. update textarea with JS-code
+            let js = "";
+            for (let i = 0; i < 16; i++)
+                js += "prjMtx[" + i + "] = " + prjMtxCells[i].value + ";\n";
+            prjMtxJsCode.value = js;
+
+            // 2. update view if needed
+            if (doShow)
+                calcAndShow();
+        }
+
+        function setPrjMtxCellsTransposed(m, doShow = true) {
+            for (let i = 0; i < 16; i++)
+                prjMtxCells[i].value = m[i * 4 - 15 * ((i / 4) | 0)];
+            prjMtx_inputChg(doShow);
+        }
+
+        function loadNow_prjMtx_unity(doShow = true) {
+            setPrjMtxCellsTransposed([1, 0, 0, 0,
+                0, 1, 0, 0,
+                0, 0, 1, 0,
+                0, 0, 0, 1]
+                , doShow);
+        }
+
+        function loadNow_prjMtx_paral(doShow = true) {
+            let a = document.getElementById('prjParaA').value * Math.PI / 180;
+            let f = document.getElementById('prjParaF').value * 1;
+            setPrjMtxCellsTransposed([1, 0, (-Math.cos(a) * f).toFixed(2), 0,
+                0, 1, (-Math.sin(a) * f).toFixed(2), 0,
+                0, 0, 0, 0,
+                0, 0, 0, 1]
+                , doShow);
+        }
+
+        function loadNow_prjMtx_persp(doShow = true) {
+            let d = (document.getElementById('prjParaD').value * 1).toFixed(2);
+            setPrjMtxCellsTransposed([d, 0, 0, 0,
+                0, d, 0, 0,
+                0, 0, d, 0,
+                0, 0, 1, 0]
+                , doShow);
+        }
+
+        function prjMtx_paramChg(p, doShow = true) {
+            switch (p) {
+                case 1:
+                case 2: loadNow_prjMtx_paral(doShow); break;
+                case 3: loadNow_prjMtx_persp(doShow); break;
+            }
+        }
+
+        function blockPts(dx = 1, dy = 1, dz = 1) {
+            //       y
+            //       ^
+            //       |  
+            //       3     2
+            //    7  |  6
+            //       |       
+            //       0-----1----> x
+            //    4     5
+            //  z
+            let ox = -dx / 2;
+            let oy = -dy / 2;
+            let oz = -dz * 3;  // dz/2-.5; nice for parallel proj.
+            return [ox, oy, oz,    // p0
+                dx + ox, oy, oz,    // p1
+                dx + ox, dy + oy, oz,
+                ox, dy + oy, oz,
+                ox, oy, dz + oz,
+                dx + ox, oy, dz + oz,
+                dx + ox, dy + oy, dz + oz,
+                ox, dy + oy, dz + oz];   // p7
+        }
+
+        function edgesArray() {
+            return [0, 1, 1, 2, 2, 3, 3, 0,
+                4, 5, 5, 6, 6, 7, 7, 4,
+                0, 4, 1, 5, 2, 6, 3, 7];
+        }
+
+        function redraw(cnv, img, edg) {
+            let ctx = cnv.getContext("2d");
+            if (!ctx)
+                return;
+
+            let h = cnv.height;
+            let w = cnv.width;
+            let d = img.dim;
+            let sx = 100;
+            let sy = 100;
+            let ox = 100;
+            let oy = 100;
+            let pointRadius = 7;
+
+            // clear canvas
+            ctx.save();
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0, 0, w, h);
+            ctx.restore();
+
+            // redraw points
+            ctx.fillStyle = "black";
+            ctx.strokeStyle = "blue";
+
+            if (d <= 2)
+                return;
+
+            // show edges, note: edg stores pairs of logical indices in the img array
+            //   => edg[i] is "from index" and   edg[i+1] is "to index"
+            //      these indices must be multiplied by dimension to read from img-array
+            for (var i = 0; i < edg.length; i += 2) {
+                ctx.beginPath();
+                ctx.moveTo(img[edg[i] * d + 0] * sx + ox, h - (img[edg[i] * d + 1] * sy + oy));
+                ctx.lineTo(img[edg[i + 1] * d + 0] * sx + ox, h - (img[edg[i + 1] * d + 1] * sy + oy));
+                ctx.stroke();
+            }
+
+            // show the projected points
+            let n = img.length / d;
+            for (var i = 0; i < n; i++) {
+                ctx.beginPath();
+                ctx.arc(img[i * d + 0] * sx + ox, h - (img[i * d + 1] * sy + oy), pointRadius, 0, 2 * Math.PI, false);
+                ctx.fill();
+            }
+
+
+        }
+
+        function calcAndShow() {
+            //----------------------------------------------------------//
+            // fill matrix objMtx with model points
+            let objMtx = new MyMat();
+            for (let i = 0; i < objMtxCells.length; i++)
+                objMtx.push(objMtxCells[i].value);
+            objMtx.dim = 4;
+
+            // build up color data vector
+            let colorValues = [];
+            for (let i = 0; i < objMtx.length / 4; i++)
+                colorValues.push(0, 0, 0); // simply black now (R G B per vertex)
+
+            if (true)
+                objMtx = mtxRotX.mulMat(mtxRotY.mulMat(mtxRotZ.mulMat(objMtx)));
+
+            //----------------------------------------------------------//
+            // Reading projection matrix
+            let prjMtx = new MyMat();
+            if (!loadNow_jsDefinitionForPrjMtx) {
+                for (let i = 0; i < 16; i++)
+                    prjMtx.push(prjMtxCells[i].value);
+            }
+            else {
+                let jsMA = prjMtxJsCode.value;
+                eval(jsMA);
+
+                for (let i = 0; i < 16; i++)
+                    prjMtxCells[i].value = prjMtx[i];
+
+                loadNow_jsDefinitionForPrjMtx = false;
+            }
+            prjMtx.dim = 4;
+
+            //----------------------------------------------------------//
+            // perform projection now 
+            let imgMtxHom = prjMtx.mulMat(objMtx);  // homogeneous
+            let imgMtxCar = imgMtxHom.hom2car();    // cartesian
+
+
+            //----------------------------------------------------------//
+            // update Html inputs
+            for (let i = 0; i < imgMtxCells.length; i++)
+                imgMtxCells[i].value = imgMtxCar[i].toFixed(2);
+
+            //----------------------------------------------------------//
+            // render projected points
+            // Clear screen and optionally render grid
+            redraw(document.getElementById("canvas2d"), imgMtxCar, edgesArray());
+        }
+
+    </script>
+</body>
+
+</html>

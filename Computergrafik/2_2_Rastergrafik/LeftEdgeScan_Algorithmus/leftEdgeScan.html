@@ -1,0 +1,583 @@
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=windows-1252" />
+    <title>TU Ilmenau, GDV: Left Edge Scan</title>
+    <meta
+      name="description"
+      content="Example/Tests for a left edge scan line algorithm (and its visualization)"
+    />
+    <meta name="DC.Language" content="de" />
+    <script type="text/javascript">
+      var p1x = 4;
+      var p1y = 0;
+      var p2x = 7;
+      var p2y = 6;
+
+      var gridNx = 20;
+      var gridNy = 10;
+
+      var canvasWidth = 800;
+      var canvasHeight = 600;
+
+      var fullPixDx = canvasWidth / gridNx;
+      var fullPixDy = canvasHeight / gridNy;
+
+      var rasterBgColor = "#FFFFFF";
+      var rasterFgColor = "#999999";
+      var pixColor = "#000000";
+      var pixColor1 = "#FF0000";
+      var pixColor2 = "#0000FF";
+
+      var canvasReady = false;
+      var drawing = false;
+      var currDragPt = 0;
+
+      function getFullPixDx() {
+        return fullPixDx;
+      }
+      function getFullPixDy() {
+        return fullPixDy;
+      }
+
+      function getPosXY_OmS(el) {
+        var xPos = 0;
+        var yPos = 0;
+        while (el) {
+          xPos += el.offsetLeft - el.scrollLeft; //  + el.clientLeft;
+          yPos += el.offsetTop - el.scrollTop; //  + el.clientTop ;
+          el = el.offsetParent;
+        }
+        return [xPos, yPos];
+      }
+
+      function hypot(dx, dy) {
+        return Math.sqrt(dx * dx + dy * dy);
+      }
+
+      function handleMove(ev, obj) {
+        var ctx = obj.getContext("2d");
+        if (!ctx) return;
+
+        if (window.event) ev = window.event; // e.g. IE
+
+        var posXY = getPosXY_OmS(obj);
+        var mX = ev.clientX - posXY[0];
+        var mY = obj.height - (ev.clientY - posXY[1]);
+
+        // document.getElementById("test2").innerHTML="MousePos("+mX+", "+mY+") ("+(mX/getFullPixDx())+", "+(mY/getFullPixDy())+") cdp:"+currDragPt;
+
+        if (!obj.isDrag) {
+          currDragPt = -1;
+          return;
+        }
+
+        if (currDragPt < 0) {
+          if (document.getElementById("mouseMode").value == "1") currDragPt = 1;
+          if (document.getElementById("mouseMode").value == "2") currDragPt = 2;
+
+          if (document.getElementById("mouseMode").value == "0") {
+            // find nearest
+            var MX = mX / getFullPixDx();
+            var MY = mY / getFullPixDy();
+            var d1 = hypot(MX - p1x, MY - p1y);
+            var d2 = hypot(MX - p2x, MY - p2y);
+            currDragPt = d1 > d2 ? 2 : 1;
+          }
+        }
+
+        if (currDragPt == 2) setP2ByMouseXY(mX, mY, obj.width, obj.height);
+        else setP1ByMouseXY(mX, mY, obj.width, obj.height);
+
+        updateAll();
+      }
+    </script>
+  </head>
+
+  <body>
+    <h1>Tests zum LeftEdgeScan-Algorithmus</h1>
+
+    <article style="float: left">
+      rx:<input
+        id="numPixelX"
+        type="number"
+        pattern="\d*"
+        value="20"
+        size="2"
+      />
+      ry:<input
+        id="numPixelY"
+        type="number"
+        pattern="\d*"
+        value="10"
+        size="2"
+      />
+      <button type="button" onclick="canvasReady=false; updateAll(false);">
+        [show]
+      </button>
+      &nbsp; &nbsp; &nbsp; set:<select id="mouseMode">
+        <option value="0" selected="selected">Nearest</option>
+        <option value="1">P1</option>
+        <option value="2">P2</option>
+      </select>
+      <br />
+      <canvas
+        id="raster"
+        onmousedown="this.isDrag=true;handleMove(event, this)"
+        onmouseup="this.isDrag=false;"
+        onmousemove="handleMove(event, this)"
+        width="800"
+        height="400"
+      ></canvas>
+    </article>
+
+    <article style="float: right">
+      <article id="result">
+        <table border="1">
+          <tbody>
+            <tr>
+              <td>y</td>
+              <td>n</td>
+              <td>x</td>
+              <td>x<sub>aufgerundet</sub></td>
+            </tr>
+            <tr>
+              <td>7</td>
+              <td>7</td>
+              <td>9 +0/7</td>
+              <td>9</td>
+            </tr>
+            <tr>
+              <td>6</td>
+              <td>6</td>
+              <td>9 -5/7</td>
+              <td>9</td>
+            </tr>
+            <tr>
+              <td>5</td>
+              <td>5</td>
+              <td>8 -3/7</td>
+              <td>8</td>
+            </tr>
+            <tr>
+              <td>4</td>
+              <td>4</td>
+              <td>7 -1/7</td>
+              <td>7</td>
+            </tr>
+            <tr>
+              <td>3</td>
+              <td>3</td>
+              <td>7 -6/7</td>
+              <td>7</td>
+            </tr>
+            <tr>
+              <td>2</td>
+              <td>2</td>
+              <td>6 -4/7</td>
+              <td>6</td>
+            </tr>
+            <tr>
+              <td>1</td>
+              <td>1</td>
+              <td>5 -2/7</td>
+              <td>5</td>
+            </tr>
+            <tr>
+              <td>0</td>
+              <td>0</td>
+              <td>4 +0/7</td>
+              <td>4</td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
+      <article id="test2"></article>
+    </article>
+
+    <article style="float: left">
+      <br />
+      Testablauf:
+      <ol>
+        <li>
+          Bei Bedarf Ausdehnung des Pixelfelds festlegen (rx und ry) und [show]
+          clicken
+        </li>
+        <li>
+          Auswahl des zu bewegenden Endpunkts (Achtung: P1 stets unten, P2 stets
+          oben)
+        </li>
+        <li>Click oder Drag um Position des Endpunkts fetszulegen</li>
+        <li>Grafik/Werte/Implementierung betrachten</li>
+      </ol>
+    </article>
+
+    <footer style="position: fixed; bottom: 0px">
+      Ulf D�ring, TU Ilmenau, Dez. 2014
+    </footer>
+
+    <script type="text/javascript">
+      function drawPixel(canvas, x, y, color) {
+        var ctx = canvas.getContext("2d");
+        ctx.save();
+        ctx.fillStyle = !color ? "#000000" : color;
+        ctx.fillRect(x, y, 1, 1);
+        ctx.restore();
+      }
+
+      function drawVLine(canvas, x, color) {
+        var ctx = canvas.getContext("2d");
+        ctx.save();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = !color ? "#000000" : color;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawHLine(canvas, y, color) {
+        var ctx = canvas.getContext("2d");
+        ctx.save();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = !color ? "#000000" : color;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawLine(canvas, x1, y1, x2, y2, color) {
+        var ctx = canvas.getContext("2d");
+        ctx.save();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = !color ? "#000000" : color;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawCircle(canvas, x, y, r, color) {
+        var ctx = canvas.getContext("2d");
+        ctx.save();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = !color ? "#000000" : color;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, 2 * Math.PI, false);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function fill(cv, color) {
+        var ctx = cv.getContext("2d");
+        ctx.save();
+        ctx.beginPath();
+        ctx.fillStyle = color;
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.rect(0, 0, cv.width, cv.height);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function setP1ByMouseXY(mx, my, cw, ch) {
+        fullPixDx = cw / gridNx;
+        fullPixDy = ch / gridNy;
+
+        var nPX = Math.floor(mx / fullPixDx);
+        var nPY = Math.floor(my / fullPixDy);
+        if (nPY >= p2y)
+          // check if value is BAD for p1
+          return; // p1 must be below p2!!!
+
+        if (p1x != nPX || p1y != nPY) canvasReady = false;
+        p1x = nPX;
+        p1y = nPY;
+      }
+
+      function setP2ByMouseXY(mx, my, cw, ch) {
+        fullPixDx = cw / gridNx;
+        fullPixDy = ch / gridNy;
+
+        var nPX = Math.floor(mx / fullPixDx);
+        var nPY = Math.floor(my / fullPixDy);
+        if (p1y >= nPY)
+          // check if value is BAD for p2
+          return; // p1 must be below p2!!!
+
+        if (p2x != nPX || p2y != nPY) canvasReady = false;
+        p2x = nPX;
+        p2y = nPY;
+      }
+
+      function drawTEXT(canvas, PX, PY, txt, color) {
+        //        return;
+        var cw = canvas.width;
+        var ch = canvas.height;
+        var pw = cw / gridNx;
+        var ph = ch / gridNy;
+
+        var ctx = canvas.getContext("2d");
+        ctx.save();
+        ctx.beginPath();
+        ctx.fillStyle = color ? color : "black";
+        ctx.font = "bold 16px Arial";
+        ctx.fillText(txt, PX * pw, ch - PY * ph - 2);
+        ctx.restore();
+      }
+
+      function drawLINE(canvas, X1, Y1, X2, Y2, color) {
+        var cw = canvas.width;
+        var ch = canvas.height;
+        var pw = cw / gridNx;
+        var ph = ch / gridNy;
+
+        drawLine(
+          canvas,
+          (X1 + 0.5) * pw,
+          ch - (Y1 + 0.5) * ph,
+          (X2 + 0.5) * pw,
+          ch - (Y2 + 0.5) * ph,
+          color
+        );
+      }
+
+      function drawPIXEL(canvas, PX, PY, pixCol) {
+        var cw = canvas.width;
+        var ch = canvas.height;
+        var pw = cw / gridNx;
+        var ph = ch / gridNy;
+
+        var ctx = canvas.getContext("2d");
+        ctx.save();
+        ctx.beginPath();
+        ctx.fillStyle = pixCol;
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.rect(PX * pw, ch - (PY + 1) * ph, pw, ph);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function drawCIRCLE(canvas, PX, PY, RR, color) {
+        var cw = canvas.width;
+        var ch = canvas.height;
+        var pw = cw / gridNx;
+        var ph = ch / gridNy;
+
+        var ctx = canvas.getContext("2d");
+        ctx.save();
+        ctx.beginPath();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = !color ? "#000000" : color;
+        ctx.beginPath();
+        ctx.arc(
+          (PX + 0.5) * pw,
+          ch - (PY + 0.5) * ph,
+          (pw * RR) / 2,
+          0,
+          2 * Math.PI,
+          false
+        );
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawPIXELS(canvas, pixels, pixCol) {
+        for (var i = 0; i < pixels.length; i++)
+          drawPIXEL(canvas, pixels[i][0], pixels[i][1], pixCol);
+      }
+
+      function drawPIXELS_circle(canvas, pixels, pixCol) {
+        for (var i = 0; i < pixels.length; i++)
+          drawCIRCLE(canvas, pixels[i][0], pixels[i][1], 1, pixCol);
+      }
+
+      function listPIXELS(el, pixels) {
+        pixels.push([p2x, p2y, 0]);
+        var trs = "";
+        var x0 = pixels[0][0];
+        var y0 = pixels[0][1];
+        var dy = p2y - p1y;
+        for (var i = pixels.length - 1; i >= 0; i--) {
+          var dx = i == 0 ? "" : "" + (pixels[i][0] - pixels[i - 1][0]);
+          var xStr =
+            "" +
+            pixels[i][0] +
+            " " +
+            (pixels[i][2] >= 0 ? "+" : "") +
+            pixels[i][2] +
+            "/" +
+            dy;
+          trs +=
+            "<tr><td>" +
+            pixels[i][1] +
+            "</td>" +
+            "<td>" +
+            i +
+            "</td>" +
+            "<td>" +
+            xStr +
+            "</td>" +
+            "<td>" +
+            pixels[i][0] +
+            "</td>" +
+            "</tr>\n";
+        }
+        el.innerHTML =
+          '<table border="1"><tr>' +
+          "<td>y</td>" +
+          "<td>n</td>" +
+          "<td>x</td>" +
+          "<td>x<sub>aufgerundet</sub></td>" +
+          "</tr>" +
+          trs +
+          "</table>";
+      }
+
+      function drawRaster(canvas, numbersToo) {
+        if (!canvas) return;
+
+        fill(canvas, rasterBgColor);
+        var w = canvas.width; // we split it up into gridNx columns
+        var h = canvas.height; // we split it up into gridNy rows
+        var pw = w / gridNx; // the pixel width (in pixel;)
+        var ph = h / gridNy; // the pixel heigth (in pixel;)
+
+        for (var x = 1; x < gridNx; x++)
+          drawVLine(canvas, x * pw, rasterFgColor);
+        for (var y = 1; y < gridNy; y++)
+          drawHLine(canvas, y * ph, rasterFgColor);
+
+        if (numbersToo) {
+          for (var x = 0; x < gridNx; x++)
+            drawTEXT(canvas, x, 0, "" + x, rasterFgColor);
+          for (var y = 0; y < gridNy; y++)
+            drawTEXT(canvas, 0, y, "" + y, rasterFgColor);
+        }
+      }
+
+      function drawRasterMidPoints(canvas) {
+        if (!canvas) return;
+
+        var w = canvas.width; // we split it up into gridNx columns
+        var h = canvas.height; // we split it up into gridNy rows
+        var pw = w / gridNx; // the pixel width (in pixel;)
+        var ph = h / gridNy; // the pixel heigth (in pixel;)
+
+        for (var x = 0; x < gridNx; x++)
+          for (var y = 0; y < gridNy; y++)
+            drawPixel(
+              canvas,
+              (x + 0.5) * pw,
+              h - (y + 0.5) * ph,
+              rasterFgColor
+            );
+      }
+
+      function calcLeftEdgeScan() {
+        var pixels = [];
+
+        var neg = p2x < p1x;
+
+        var x = p1x;
+        var z = neg ? p1x - p2x : p2x - p1x; // make it always pos.
+        var n = p2y - p1y; // per def always pos. (scan line runs from buttom to top)
+        var a = neg ? 1 - n : 0;
+        var i = neg ? -1 : 1;
+
+        for (var y = p1y; y < p2y; y++) {
+          // process
+          pixels.push([x, y, a]);
+
+          // calc
+          a += z;
+          while (a > 0) {
+            x += i;
+            a -= n;
+          }
+        }
+
+        return pixels;
+      }
+
+      function calcLeftEdgeScanUD() {
+        //alert( "floor(2/-3)="+Math.floor(2/-3)+"\n"
+        //      +"ceil(2/-3)="+Math.ceil(2/-3)+"\n");
+        var pixels = [];
+
+        var nx = p2x < p1x;
+        var f = nx ? -1 : 1;
+
+        var x = p1x;
+        var dx = nx ? p1x - p2x : p2x - p1x; // make it always pos.
+        var dy = p2y - p1y; // per def always pos. (scan line runs from buttom to top)
+        var ixk = Math.floor(dx / dy) * f; // integer value of 1/m
+        var rest = dx % dy; // rest of 1/m, always pos
+        var ixg = ixk + (rest != 0 ? f : 0); // if there is a rest we round to the next value as starting point
+        var akku = nx ? dy - 1 : 0; // for dx>0 we have initially local x,y = 0,0 => accu=dy*x-y*dx=0
+
+        for (var y = p1y; y < p2y; y++) {
+          pixels.push([x, y]);
+          akku -= rest;
+          if (akku >= 0) x += ixk;
+          else {
+            x += ixg;
+            akku += dy;
+          }
+        }
+        return pixels;
+      }
+
+      function updateAll() {
+        if (drawing || canvasReady) return;
+
+        var numPixelX = document.getElementById("numPixelX").value;
+        var numPixelY = document.getElementById("numPixelY").value;
+        if (numPixelX > 1 && numPixelX <= 50) gridNx = numPixelX;
+        else document.getElementById("numPixelX").value = gridNx;
+        if (numPixelY > 1 && numPixelY <= 50) gridNy = numPixelY;
+        else document.getElementById("numPixelY").value = gridNy;
+
+        drawing = true;
+        var canvas = document.getElementById("raster");
+        if (!canvas) return;
+
+        var result = document.getElementById("result");
+
+        // canvasWidth:canvasHeight > gridNx:gridNy -> grid is relat. higher than the raster -> have to recalc width
+        if (canvasWidth * gridNy > gridNx * canvasHeight) {
+          canvas.width = (canvasHeight / gridNy) * gridNx; // recalc width
+          canvas.height = canvasHeight; // use original (maximal) height
+        } else {
+          canvas.width = canvasWidth; // use original (maximal) width
+          canvas.height = (canvasWidth / gridNx) * gridNy; // recalc height
+        }
+
+        drawRaster(canvas, true);
+
+        drawPIXEL(canvas, p1x, p1y, pixColor1);
+        drawPIXEL(canvas, p2x, p2y, pixColor2);
+
+        var pixels = calcLeftEdgeScan();
+        drawPIXELS(canvas, pixels, pixColor);
+        listPIXELS(result, pixels);
+
+        drawPIXELS_circle(canvas, calcLeftEdgeScanUD(), "red");
+
+        drawLINE(canvas, p1x, p1y, p2x, p2y, "red");
+        drawTEXT(canvas, p1x, p1y, "P1", "white");
+        drawTEXT(canvas, p2x, p2y, "P2", "white");
+
+        drawRasterMidPoints(canvas);
+
+        canvasReady = true;
+        drawing = false;
+      }
+
+      // make initial draws
+      updateAll();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Sampling in 2d</title>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <meta name="author" content="TU-Ilmenau, 2022-11-08" />
+    <script type="text/javascript">
+      function someSin(x, sx, ox, sy, oy) {
+        return Math.sin(sx * x + ox) * sy + oy;
+      }
+
+      let functions = [
+        {
+          n: "sin1",
+          f: function (x) {
+            return someSin(x, 0.3, 0, 5, 0);
+          },
+          c: "Das Original hat eine relativ niedrige Frequenz, kann sehr gut abgetastet werden.",
+        },
+        {
+          n: "sin2",
+          f: function (x) {
+            return someSin(x, 1, 0, 5, 0);
+          },
+          c: "Das rekonstruierte Signal hat zumindest noch die gleiche Frequenz.",
+        },
+        {
+          n: "sin3",
+          f: function (x) {
+            return someSin(x, 3.0, 0, 5, 0);
+          },
+          c: "Fehler: das rekonstruierte Signal hat eine wesentlich niedrigere Frequenz.",
+        },
+        {
+          n: "sinX",
+          f: function (x) {
+            return someSin(x, paramsX.sx, paramsX.ox, paramsX.sy, paramsX.oy);
+          },
+          c: "Für eigene Tests mit Funktionsparametern...",
+        },
+      ];
+      let samples = { ox: 3, dx: 20 };
+      let paramsX = { sx: 1.2, ox: 10, sy: 5, oy: 0 };
+      let fncIdx = 0;
+
+      function setFunction(fn) {
+        let ret = fncIdx;
+        for (let i = 0; i < functions.length; i++)
+          if (functions[i].n == fn) {
+            inp = document.getElementById("comment");
+            if (inp) inp.innerHTML = functions[i].c;
+            ret = i;
+            document.getElementById("paramsX").style.display =
+              fn == "sinX" ? "inline" : "none";
+            break;
+          }
+        return ret;
+      }
+
+      function limVal(v, mi, ma) {
+        v *= 1;
+        return v <= mi ? mi : v >= ma ? ma : v;
+      }
+
+      function countMiMa(a) {
+        let mi = 0;
+        let ma = 0;
+        let wasUp;
+        for (let i = 0; i < a.length - 1; i++) {
+          if (a[i].y == a[i + 1].y) continue;
+          let up = a[i].y < a[i + 1].y;
+          if (mi == 0) {
+            mi = 1;
+            ma = 1;
+            wasUp = up;
+            continue;
+          }
+          if (up == wasUp) continue;
+          if (up) mi++;
+          else ma++;
+          wasUp = up;
+        }
+        return { mi: mi, ma: ma };
+      }
+
+      function redraw(cnv) {
+        cnv || (cnv = document.getElementById("theCanvas"));
+        if (!cnv) return;
+        var ctx = cnv.getContext("2d");
+        if (!ctx) return;
+
+        ctx.clearRect(0, 0, cnv.width, cnv.height);
+
+        let x0 = 0;
+        let xe = Math.PI * 20; // at right border of the window we have this x value
+        let dy = ((xe - x0) / cnv.width) * cnv.height; // keep scaling in dx and dy (aspect ratio)
+        let y0 = -dy / 2; // center vertically
+
+        let ori = [];
+        let sam = [];
+        let yShift = 130;
+
+        ctx.save();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = "black";
+        ctx.beginPath();
+        for (let xp = 0; xp < cnv.width; xp++) {
+          let x = x0 + (xp * (xe - x0)) / cnv.width;
+          let y = functions[fncIdx].f(x);
+          let yp =
+            cnv.height - 1 - ((y - y0) / dy) * cnv.height - cnv.height * 0.25; // flip + shift up
+
+          ori.push({ x: xp, y: yp });
+          if ((xp - samples.ox) % samples.dx == 0) sam.push({ x: xp, y: yp });
+          if (xp == 0) ctx.moveTo(xp, yp);
+          else ctx.lineTo(xp, yp);
+        }
+        ctx.stroke();
+        ctx.restore();
+
+        if (sam.length > 0) {
+          ctx.save();
+          ctx.lineWidth = 1;
+          ctx.strokeStyle = "blue";
+          ctx.beginPath();
+          ctx.moveTo(sam[0].x, sam[0].y + yShift);
+          for (let i = 1; i < sam.length; i++)
+            ctx.lineTo(sam[i].x, sam[i].y + yShift);
+          ctx.stroke();
+
+          for (let i = 0; i < sam.length; i++) {
+            ctx.beginPath();
+            ctx.strokeStyle = "gray";
+            ctx.lineWidth = 0.4;
+            ctx.moveTo(sam[i].x, sam[i].y);
+            ctx.lineTo(sam[i].x, sam[i].y + yShift);
+            ctx.stroke();
+
+            ctx.strokeStyle = "red";
+            ctx.lineWidth = 0.7;
+            ctx.beginPath();
+            ctx.arc(sam[i].x, sam[i].y + yShift, 4, 0, 2 * Math.PI);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(sam[i].x, sam[i].y, 2, 0, 2 * Math.PI);
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+
+        ctx.font = "14px Helvetica";
+        ctx.fillStyle = "black";
+        ctx.fillText("Original", 5, 16);
+
+        ctx.fillStyle = "blue";
+        ctx.fillText("Rekonstruktion", 5, 250);
+
+        let miMaO = countMiMa(ori);
+        let miMaR = countMiMa(sam);
+        let o;
+        o = document.getElementById("comment2");
+        if (o)
+          o.innerHTML =
+            "Das Original hat " +
+            miMaO.mi +
+            " Minima und " +
+            miMaO.ma +
+            " Maxima. " +
+            "Das Rekonstruktion hat " +
+            miMaR.mi +
+            " Minima und " +
+            miMaR.ma +
+            " Maxima. " +
+            (Math.abs(miMaO.ma + miMaO.mi - miMaR.ma - miMaR.mi) > 2
+              ? "Problem!!!!!!"
+              : "Ok."); // try to ignore problems at begin and end
+
+        o = document.getElementById("takenSam");
+        if (o) o.innerHTML = sam.length;
+
+        o = document.getElementById("oFreq");
+        if (o) o.innerHTML = (miMaO.ma + miMaO.mi) / 2;
+
+        o = document.getElementById("rFreq");
+        if (o) o.innerHTML = (miMaR.ma + miMaR.mi) / 2;
+
+        o = document.getElementById("nyMinSam");
+        if (o) o.innerHTML = miMaO.ma + miMaO.mi;
+
+        o = document.getElementById("nyRate");
+        if (o) o.innerHTML = miMaO.ma + miMaO.mi;
+      }
+
+      function initScene() {
+        fncIdx = setFunction("sin1");
+        valuesToInpts();
+        redraw();
+      }
+
+      var ignoreInpChg = false;
+      function handleInputChg() {
+        if (ignoreInpChg) return;
+        // read current values and ensure that they did not left their range
+        let inp;
+        inp = document.getElementById("OX");
+        if (inp) samples.ox = limVal(inp.value, 1.0, 100);
+        inp = document.getElementById("DX");
+        if (inp) samples.dx = limVal(inp.value, 1.0, 500);
+        inp = document.getElementById("sx");
+        if (inp) paramsX.sx = limVal(inp.value, 0.1, 100);
+        inp = document.getElementById("ox");
+        if (inp) paramsX.ox = limVal(inp.value, 0.1, 100);
+        inp = document.getElementById("sy");
+        if (inp) paramsX.sy = limVal(inp.value, 0.1, 100);
+        inp = document.getElementById("oy");
+        if (inp) paramsX.oy = limVal(inp.value, 0.1, 100);
+
+        inp = document.getElementById("fnc");
+        if (inp) fncIdx = setFunction(inp.value);
+
+        valuesToInpts(); // may be we had to map a value into its limits -> updating now all
+        redraw();
+      }
+
+      function valuesToInpts() {
+        // Write the current values in the inputs.
+        ignoreInpChg = true;
+        let inp;
+        inp = document.getElementById("OX");
+        if (inp) inp.value = samples.ox;
+        inp = document.getElementById("DX");
+        if (inp) inp.value = samples.dx;
+        inp = document.getElementById("sx");
+        if (inp) inp.value = paramsX.sx;
+        inp = document.getElementById("ox");
+        if (inp) inp.value = paramsX.ox;
+        inp = document.getElementById("sy");
+        if (inp) inp.value = paramsX.sy;
+        inp = document.getElementById("oy");
+        if (inp) inp.value = paramsX.oy;
+
+        inp = document.getElementById("fnc");
+        if (inp) inp.value = functions[fncIdx].n;
+
+        ignoreInpChg = false;
+      }
+    </script>
+  </head>
+
+  <body onload="initScene()">
+    <h4>Sampling von Funktionen (1D-Beispiele)</h4>
+    <div style="display: inline-block">
+      <canvas
+        id="theCanvas"
+        width="512"
+        height="256"
+        style="border: black solid 1px"
+      ></canvas>
+    </div>
+    <br />
+    <span id="comment"></span><br />
+    <span id="comment2"></span>
+    <br /><br />
+    Sampleparameter: OX:<input
+      id="OX"
+      type="number"
+      style="width: 4em"
+      step="1"
+      oninput="handleInputChg()"
+    />
+    DX:<input
+      id="DX"
+      type="number"
+      style="width: 4em"
+      step="1"
+      oninput="handleInputChg()"
+    />
+    (Lage der grauen Linien = Abtastpunkte in Pixeln)
+    <br />
+    Funktionsauswahl: fnc:<select id="fnc" onchange="handleInputChg()">
+      <option value="sin1">sin1</option>
+      <option value="sin2">sin2</option>
+      <option value="sin3">sin3</option>
+      <option value="sinX">sinX</option></select
+    ><br />
+    <span id="paramsX">
+      Parameter für sinX = sin(x*sx+ox)*sy+oy: sx:<input
+        id="sx"
+        type="number"
+        style="width: 4em"
+        step="0.1"
+        oninput="handleInputChg()"
+      />
+      ox:<input
+        id="ox"
+        type="number"
+        style="width: 4em"
+        step="0.1"
+        oninput="handleInputChg()"
+      />
+      sy:<input
+        id="sy"
+        type="number"
+        style="width: 4em"
+        step="0.1"
+        oninput="handleInputChg()"
+      />
+      oy:<input
+        id="oy"
+        type="number"
+        style="width: 4em"
+        step="0.1"
+        oninput="handleInputChg()"
+      />
+    </span>
+    <br />
+    <b>Abschätzung zur Nyquist-Rate:</b><br />
+    Originalfrequenz sei hier: <b id="oFreq">?</b> = (Anzahl der Minima + Anzahl
+    der Maxima)/2, d.h. für eine erfolgreiche Rekonstruktion müssten mindestens
+    <b id="nyMinSam">?</b> Samples genommen werden bzw. die Nyquist-Rate ist ca.
+    <b id="nyRate">?</b> Samples im dargestellten Bereich (Abtastfrequenz =
+    doppelte Signalfrequenz).
+    <i
+      >Beachte: Die Zählung der Minima und Maxima ergibt nicht die genaue
+      Frequenz!</i
+    >
+    <br />
+    Frequenz der Rekonstruktion is ca. <b id="rFreq">?</b>
+    <br />
+    Anzahl der genommenen Samples: <b id="takenSam">?</b>
+    <br />
+    <a
+      href="https://de.wikipedia.org/w/index.php?title=Nyquist-Frequenz&oldid=223481546"
+      >Artikel zur Nyquist-Frequenz und Nyquist-Rate auf Wikipedia</a
+    >
+  </body>
+</html>

@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <title>Experiments with kd-Trees App</title>
+    <style type="text/css">
+      legend {
+        font-weight: bold;
+      }
+      canvas {
+        border: 1px solid gray;
+        vertical-align: top;
+      }
+    </style>
+  </head>
+  <body>
+    <b style="font-size: 120%">Experiments with kd-Trees App</b><br />
+    <canvas id="canvas" width="320" height="320"></canvas>
+    <div style="display: inline-block">
+      <small>Hint: The points can be clicked and dragged with the mouse.</small>
+
+      <!-- todo:
+            extend examples 
+              [ ] incremental, median, +middle!!!
+              [ ] variants for even median numbers (smaller, greater, middle, SAH?)
+              [ ] max number of points in cell -> could define an n with n=1...; 
+                   -> stop split if number of points is n 
+                  for median and incr. n=0 makes sense; for middle in our case not (auto set to 1 if necess.) 
+        -->
+
+      <fieldset>
+        <legend>Tree generation strategy</legend>
+        <select id="splitStrateg" onchange="update_SpS()">
+          <option value="0">Incemental</option>
+          <option value="1">Middle</option>
+          <option value="2">Median - lower for even numbers</option>
+          <option value="3">Median - greater for even numbers</option>
+          <option value="4">
+            Median - middle of lower and greater for even numbers
+          </option>
+        </select>
+        The tree is bulid up using the:<br />
+        <b><span id="strSpS">Middle</span></b> strategy.
+        <br style="margin-bottom: 0.5em" />
+        <button
+          type="button"
+          title="toggle first split direction"
+          onclick="toogle_XvY()"
+        >
+          Toggle 1st split dir
+        </button>
+        The first split is performed parallel to the
+        <b><span id="strXvY">Y</span></b
+        >-axis.<br />
+        <b>NOTE:</b> In this implementation there may be stored one point per
+        cell.
+      </fieldset>
+
+      <fieldset>
+        <legend>Points</legend>
+        <button
+          type="button"
+          title="add one random point"
+          onclick="addRandomPoints(1)"
+        >
+          +1
+        </button>
+        <button
+          type="button"
+          title="add 5 random points"
+          onclick="addRandomPoints(5)"
+        >
+          +5
+        </button>
+        <button
+          type="button"
+          title="clear all points"
+          onclick="setPoints('empty')"
+        >
+          Clear
+        </button>
+        <button
+          type="button"
+          title="initial example"
+          onclick="setPoints('start')"
+        >
+          Reset
+        </button>
+        <button
+          type="button"
+          title="example from exam 1"
+          onclick="setPoints('exam1')"
+        >
+          Exam 1
+        </button>
+        <button
+          type="button"
+          title="example from slides 1"
+          onclick="setPoints('slid1')"
+        >
+          V1.4-16
+        </button>
+        <button
+          type="button"
+          title="example from slides 2"
+          onclick="setPoints('slid2')"
+        >
+          V1.4-18
+        </button>
+        <input
+          type="checkbox"
+          value="1"
+          checked="checked"
+          id="clickGensPt"
+        />Click generates new point<br />
+        <input
+          type="checkbox"
+          value="1"
+          checked="checked"
+          id="useCoorGrid"
+        />Use coordinate grid<br />
+      </fieldset>
+
+      <fieldset>
+        <legend>Info</legend>
+        Number of points : <span id="numPts">8</span> <br />
+        point data :
+        <span
+          id="txtTree"
+          style="
+            display: inline-block;
+            max-width: 600px;
+            overflow-wrap: break-word;
+          "
+        >
+          ( (, (D:y=271, ( (C:y=210, (F:x=131, G:x=131)), ))), ( (H:y=93,
+          E:y=45), ( ( (, (A:x=213, B:x=206)), ), )))</span
+        >
+        <br />
+        last SAH-min : <span id="sahMinV">undefined</span> @x=
+        <span id="sahMinX">undefined</span><br />
+        <input
+          type="checkbox"
+          value="1"
+          id="showPtCoords"
+          onchange="redraw()"
+        />Show point coordinates<br />
+        <input
+          type="checkbox"
+          value="1"
+          id="showSAH_now"
+          onchange="redraw()"
+        />Show SAH (Surface Area Heuristics) instead of kd-tree<br />
+      </fieldset>
+    </div>
+
+    <script type="text/javascript">
+      ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+      //
+      //  Global variables
+      //
+
+      var ctx; // the context2D object for painting in the canvas
+      var cnv_w; // canvas width
+      var cnv_h; // canvas height
+      var lastRootNode;
+      var lastSAH_minV;
+      var lastSAH_minX;
+
+      var pointList = []; // the list of points rendered in the canvas;
+      var selectedPointIndex = -1;
+      var selectedPointColor = "orange";
+      var selectedPointOffset = null;
+      var pointRadius = 5; // the size of the rendered points
+
+      var isMouseDown = false;
+      var splitStrateg = 0; // 0: incremental, 1: median, 2: middle
+      var bool_XvY_isX = true; // isX means is parallel to x (i.e. uses y coord)
+
+      ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+      //
+      //  Initialization / Event handling
+      //
+
+      window.addEventListener("load", function () {
+        let cnv = document.getElementById("canvas");
+        ctx = cnv.getContext("2d");
+        cnv_w = cnv.width;
+        cnv_h = cnv.height;
+        ctx.translate(0.5, 0.5); // looks nicer ;-)
+
+        cnv.addEventListener("mousedown", mouseDown);
+        cnv.addEventListener("mousemove", mouseMove);
+        cnv.addEventListener("mouseup", mouseUp);
+        cnv.addEventListener("mouseout", mouseUp);
+
+        update_SpS(false); // update shown text
+        toogle_XvY(false); // update shown text
+
+        setPoints("start");
+      });
+
+      function mouseDown(event) {
+        isMouseDown = true;
+        //try to get a point that is clicked on
+        let mx = event.offsetX;
+        let my = cnv_h - event.offsetY; // RHS, therefore: height-y
+
+        selectedPointIndex = -1;
+        pointList.forEach(function (point, index) {
+          if (Math.hypot(point[0] - mx, point[1] - my) < pointRadius + 5) {
+            // an certain offset is used to avoid unwanted point generations
+            selectedPointIndex = index;
+            selectedPointOffset = [mx - point[0], my - point[1]];
+            return false; //cancel forEach
+          }
+        });
+
+        if (
+          selectedPointIndex == -1 &&
+          document.getElementById("clickGensPt").checked
+        ) {
+          selectedPointIndex = pointList.length;
+          selectedPointOffset = [0, 0];
+          pointList.push([mx, my, getNxtPtId()]);
+        }
+
+        redraw();
+      }
+
+      let smallCoordsFactor = 20;
+      function rndPtCoo(c) {
+        if (!document.getElementById("useCoorGrid").checked) return c;
+        let g = smallCoordsFactor;
+        return (((c + g / 2) / g) | 0) * g;
+      }
+
+      function ptsWithSmallCoords() {
+        let g = smallCoordsFactor;
+        let ret = "<br>";
+        for (let i = 0; i < pointList.length; i++)
+          ret += true
+            ? pointList[i][0] / g +
+              " " +
+              pointList[i][1] / g +
+              " (" +
+              pointList[i][2] +
+              ")<br>"
+            : pointList[i][2] +
+              "(" +
+              pointList[i][0] / g +
+              ", " +
+              pointList[i][1] / g +
+              ") ";
+        return ret;
+      }
+
+      function pointListStr() {
+        let ret = "";
+        for (let i = 0; i < pointList.length; i++)
+          ret += (i == 0 ? "" : ",<br>") + "[" + pointList[i] + "]";
+        return ret;
+      }
+
+      function mouseMove(event) {
+        //if the mouse is dragged and a point is clicked change the point
+        if (isMouseDown && selectedPointIndex >= 0) {
+          let mx = event.offsetX;
+          let my = cnv_h - event.offsetY; // RHS, therefore: height-y
+          pointList[selectedPointIndex] = [
+            rndPtCoo(mx - selectedPointOffset[0]),
+            rndPtCoo(my - selectedPointOffset[1]),
+            pointList[selectedPointIndex][2],
+          ];
+          redraw();
+        }
+      }
+
+      function mouseUp(event) {
+        isMouseDown = false;
+      }
+
+      function update_SpS(doToggle = true) {
+        let inp = document.getElementById("splitStrateg");
+        if (inp) {
+          if (doToggle) splitStrateg = inp.value;
+          inp.value = splitStrateg;
+        }
+        document.getElementById("strSpS").innerHTML =
+          splitStrateg == 0
+            ? "Incemental"
+            : splitStrateg == 1
+            ? "Middle"
+            : splitStrateg == 2
+            ? "Median - lower for even numbers"
+            : splitStrateg == 3
+            ? "Median - greater for even numbers"
+            : "Median - middle of lower and greater for even numbers";
+        redraw();
+      }
+
+      function toogle_XvY(doToggle = true) {
+        if (doToggle) bool_XvY_isX = !bool_XvY_isX;
+        document.getElementById("strXvY").innerHTML = bool_XvY_isX ? "X" : "Y";
+        redraw();
+      }
+
+      function addRandomPoints(count) {
+        for (let i = 0; i < count; i++) {
+          //https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/random
+          let x = Math.floor(Math.random() * cnv_w);
+          let y = Math.floor(Math.random() * cnv_h);
+          pointList.push([x, y, getNxtPtId()]); //add a new point to pointList
+        }
+        redraw();
+      }
+
+      function getNxtPtId() {
+        let used = new Set();
+        for (let i = 0; i < pointList.length; i++) used.add(pointList[i][2]);
+        let arr = Array.from(used).sort();
+
+        let theId = "A";
+        for (let i = 0; i < pointList.length; i++) {
+          if (arr[i] > theId) return theId; // found a gap
+          theId = String.fromCharCode(theId.charCodeAt(0) + 1);
+        }
+        return theId; // first new id after last found id
+      }
+
+      function setPoints(ptSetId) {
+        //  NOTE:
+        //    - In 2d the points have 2 coordinates -> for a single point p we access e.g. the x-ccord. via p[0]
+        //      and the y-coord. via p[1].
+        //    - In p[2] we store the id of the point in the point list.
+
+        selectedPointIndex = -1;
+        lastRootNode = null;
+        switch (ptSetId) {
+          case "start":
+            pointList = [
+              [50, 50, "A"],
+              [150, 30, "B"],
+              [250, 150, "C"],
+              [200, 200, "D"],
+              [50, 100, "E"],
+            ];
+            break;
+
+          case "empty":
+            pointList = [];
+            break;
+
+          case "exam1":
+            pointList = [
+              [210, 180, "A"],
+              [60, 210, "B"],
+              [90, 120, "C"],
+              [270, 90, "D"],
+              [30, 60, "E"],
+              [180, 270, "F"],
+              [240, 240, "G"],
+              [120, 30, "H"],
+            ];
+            break;
+
+          case "slid1":
+            pointList = [
+              [135, 135, "A"],
+              [30, 210, "B"],
+              [240, 45, "C"],
+              [60, 60, "D"],
+              [120, 255, "E"],
+              [210, 255, "F"],
+              [30, 180, "G"],
+              [90, 270, "H"],
+              [180, 90, "I"],
+            ];
+            break;
+
+          case "slid2":
+            pointList = [
+              [237, 260, "A"],
+              [254, 258, "B"],
+              [274, 255, "C"],
+              [234, 244, "D"],
+              [252, 239, "E"],
+              [263, 246, "F"],
+              [236, 225, "G"],
+              [255, 225, "H"],
+              [275, 238, "I"],
+              [267, 222, "J"],
+              [241, 213, "K"],
+              [226, 231, "L"],
+              [275, 268, "M"],
+              [255, 273, "N"],
+              [260, 209, "O"],
+              [275, 200, "P"],
+            ];
+            break;
+        }
+        redraw();
+      }
+
+      ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+      //
+      //  Drawing functions (canvas + text)
+      //
+
+      var redrawIsActive = false;
+      function redraw() {
+        if (redrawIsActive) return;
+        redrawIsActive = true;
+
+        ctx.clearRect(0, 0, cnv_w, cnv_h); // clear canvas area
+
+        pointList.forEach(function (it, idx) {
+          drawPoint(
+            it,
+            idx == selectedPointIndex,
+            true // true: show index + coords too; false: hide index and coords
+              ? it[2] +
+                  (document.getElementById("showPtCoords").checked
+                    ? " (" + it[0] + "," + it[1] + ")"
+                    : "")
+              : ""
+          );
+        });
+
+        lastRootNode = buildKdTree(pointList);
+        if (document.getElementById("showSAH_now").checked) drawSAH();
+        else drawTree(lastRootNode);
+        updateInfo();
+        redrawIsActive = false;
+      }
+
+      function drawPoint(
+        point,
+        isSelected = false,
+        extraInfo = "",
+        fillStyle,
+        strokeStyle,
+        customPointRadius
+      ) {
+        //'point' should be an array if size 2 filled with numbers
+        ctx.save();
+        if (fillStyle) ctx.fillStyle = fillStyle;
+        if (isSelected) ctx.fillStyle = selectedPointColor;
+        if (strokeStyle) ctx.strokeStyle = strokeStyle;
+
+        ctx.beginPath(); //start rendering a path (finished below with .fill())
+        let pr = customPointRadius ? customPointRadius : pointRadius;
+        ctx.arc(point[0], cnv_h - point[1], pr, 0, 2 * Math.PI, true); // RHS, therefore: height-y
+        if (strokeStyle) ctx.stroke();
+        else ctx.fill();
+
+        if (typeof extraInfo != "undefined")
+          ctx.fillText(
+            extraInfo,
+            point[0] + pointRadius + 1,
+            cnv_h - point[1] - 3
+          );
+        ctx.restore();
+      }
+
+      function drawLine(x1, y1, x2, y2, strokeStyle, lineDash) {
+        // strokeStyle: https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/strokeStyle
+        ctx.save();
+        ctx.beginPath();
+        ctx.strokeStyle = strokeStyle;
+        ctx.lineWidth = 1;
+        if (lineDash) ctx.setLineDash(lineDash);
+        ctx.moveTo(x1, cnv_h - y1); // RHS, therefore: height-y
+        ctx.lineTo(x2, cnv_h - y2); // RHS, therefore: height-y
+        ctx.stroke();
+        ctx.closePath();
+        ctx.restore();
+      }
+
+      function updateInfo() {
+        function writeTo(id, val) {
+          let el = document.getElementById(id);
+          if (el) el.innerHTML = val;
+        }
+
+        writeTo("numPts", pointList.length);
+        writeTo("txtTree", pointListStr()); // (lastRootNode ? lastRootNode.toString() : "")+"<br>"+ptsWithSmallCoords());
+        writeTo("sahMinV", lastSAH_minV);
+        writeTo("sahMinX", lastSAH_minX);
+      }
+
+      ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+      //
+      //  Surface area heuristics stuff
+      //
+
+      function drawSAH() {
+        // show a SAH-criteria value fncX[x] for each of the x values
+        let fncX = [];
+        let maxX = 0;
+        let minX = 0;
+        let n = pointList.length;
+        for (let x = 0; x <= cnv_w; x++) {
+          let ns = 0;
+          for (let p = 0; p < n; p++) if (pointList[p][0] < x) ns++;
+          fncX[x] = x * ns + (cnv_w - x) * (n - ns); // here the criteria value is calculated
+          if (maxX < fncX[x]) maxX = fncX[x];
+          if (fncX[minX] > fncX[x]) minX = x; //
+        }
+
+        let sX = cnv_h / maxX;
+        for (let x = 0; x <= cnv_w; x++)
+          drawPoint([x, fncX[x] * sX], false, "", "black", "black", 1);
+        drawLine(minX, 0, minX, cnv_h, "red");
+        lastSAH_minV = fncX[minX];
+        lastSAH_minX = minX;
+      }
+
+      ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+      //
+      //  kd-Tree stuff
+      //
+
+      class KdNode {
+        constructor(pa, pt, cc, sap) {
+          this.splitAtPt = sap;
+          this.parent = pa;
+          this.point = pt; // the point stored in the node (may be we store here later a list of points)
+          this.currCoord = cc; // -1 for middle cut; 0 or 1 for the other strategies (those split here at x or y coordinate)
+          this.smallerNode;
+          this.greaterNode;
+        }
+
+        level() {
+          let lev = 0;
+          let node = this;
+          while (node.parent) {
+            lev++;
+            node = node.parent;
+          }
+          return lev;
+        }
+
+        isLeaf() {
+          return this.smallerNode == null && this.greaterNode == null;
+        }
+
+        hasStoredPt() {
+          return this.point != null;
+        }
+
+        toString() {
+          function ts(n) {
+            return n == null
+              ? ""
+              : (n.hasStoredPt()
+                  ? n.point[2] +
+                    ":" +
+                    (n.currCoord == 0 ? "x=" : "y=") +
+                    n.point[n.currCoord] // note: e.g. y means here "y-coord is used"
+                  : "") +
+                  (n.isLeaf()
+                    ? ""
+                    : " (" +
+                      ts(n.smallerNode) +
+                      ", " +
+                      ts(n.greaterNode) +
+                      ")");
+          }
+          return ts(this);
+        }
+      }
+
+      function treeSepColor(level) {
+        switch (level) {
+          case 0:
+            return "green";
+          case 1:
+            return "blue";
+          case 2:
+            return "magenta";
+          case 3:
+            return "cyan";
+          case 4:
+            return "black";
+          case 5:
+            return "brown";
+        }
+        return "gray";
+      }
+
+      function removeSamePos(pts) {
+        let ret = [];
+        if (pts.length == 0) return ret;
+        ret.push(pts[0]);
+
+        for (let i = 1; i < pts.length; i++) {
+          let ok = true;
+          for (let k = 0; k < ret.length; k++)
+            if (pts[i][0] == ret[k][0] && pts[i][1] == ret[k][1]) {
+              ok = false;
+              break;
+            }
+          if (ok) ret.push(pts[i]);
+        }
+        return ret;
+      }
+
+      function buildKdTree(listPoints) {
+        return splitStrateg == 0
+          ? buildKdTree_increm(listPoints, bool_XvY_isX)
+          : splitStrateg == 1
+          ? buildKdTree_middle(listPoints, bool_XvY_isX)
+          : splitStrateg == 2
+          ? buildKdTree_median(listPoints, bool_XvY_isX, true)
+          : splitStrateg == 3
+          ? buildKdTree_median(listPoints, bool_XvY_isX, false)
+          : splitStrateg == 4
+          ? buildKdTree_median(listPoints, bool_XvY_isX, undefined)
+          : buildKdTree_sah(listPoints, bool_XvY_isX);
+      }
+
+      function buildKdTree_sah(listPoints, firstIsParallX) {
+        if (listPoints.length == 0) return null;
+
+        listPoints = removeSamePos(listPoints); // use a clone of the list to keep the original point list for interaction
+        // removeSamePos is also important, because same points will lead to infinite recursion
+        let dimOfs = firstIsParallX
+          ? 1 // will be used in the build function call(s)
+          : 0; // parallel to x-axis must use y-values => offset is 1, else 0
+
+        function build(pts, parent, lev, x0, xe, y0, ye) {
+          // recursive function which returns the root in each level
+          if (pts.length <= 1) return; // stop recursion
+          let currCoord = (lev + dimOfs) % 2; // addresses x- or y-coordinate during sorting via index 0 or 1
+          let c0 = currCoord == 0 ? x0 : y0;
+          let ce = currCoord == 0 ? xe : ye;
+
+          // 1. get the index of the (first) point where the SAH-criteria has the minimum
+          pts.sort(function (a, b) {
+            return a[currCoord] - b[currCoord];
+          }); // sort according current coordinate/dimension
+          let numPts = pts.length;
+          let sahIdx = 0;
+          let sahMin = Number.MAX_VALUE; // init with max, because we are looking for a minimum
+          for (let i = 0; i < numPts; i++) {
+            let c = pts[i][currCoord];
+            let sah = (c - c0) * i + (ce - c) * (numPts - i);
+            if (sahMin > sah) {
+              sahMin = sah;
+              sahIdx = i;
+            }
+          }
+
+          // 2. Split the list into 3 parts (smaller, median, greater). Note: splice cuts entries from the list!
+          let pt = pts.splice(sahIdx, 1)[0]; // cut sub-list which has only 1 entry (the median point)
+          let sm = pts.splice(0, sahIdx); // cut all smaller than median
+          let gr = pts; // use the rest (those which were greater than the median)
+
+          // 3. Create the new node nn as well as the sub-trees with the smaller and greater nodes (according to the curr. dim.)
+          let nn = new KdNode(parent, pt, currCoord, pt);
+          nn.smallerNode = build(sm, nn, lev + 1);
+          nn.greaterNode = build(gr, nn, lev + 1);
+          return nn;
+        }
+
+        return build(listPoints, null, 0, 0, cnv_w, 0, cnv_h);
+      }
+
+      function buildKdTree_middle(listPoints, firstIsParallX) {
+        if (listPoints.length == 0) return null;
+
+        listPoints = removeSamePos(listPoints); // use a clone of the list to keep the original point list for interaction
+        // removeSamePos is also important, because same points will lead to infinite recursion
+        let dimOfs = firstIsParallX
+          ? 1 // will be used in the build function call(s)
+          : 0; // parallel to x-axis must use y-values => offset is 1, else 0
+
+        function build(pts, parent, lev, x0, xe, y0, ye) {
+          // recursive function which returns the root in each level
+          if (pts.length <= 1) return; // stop recursion
+          let currCoord = (lev + dimOfs) % 2; // addresses x- or y-coordinate during sorting via index 0 or 1
+
+          // 1. get the index of the first point which is equal or larger than the middle
+          pts.sort(function (a, b) {
+            return a[currCoord] - b[currCoord];
+          }); // sort according current coordinate/dimension
+          let mid = currCoord == 0 ? (x0 + xe) / 2 : (y0 + ye) / 2;
+          let idx = 0;
+          while (idx < pts.length && pts[idx][currCoord] < mid) idx++;
+
+          // 2. Split the list into 3 parts (smaller, median, greater). Note: splice cuts entries from the list!
+          let sm = pts.splice(0, idx); // cut all smaller than middle
+          let gr = pts; // use the rest (those which were greater than the median)
+
+          // 3. Create the new node nn as well as the sub-trees with the smaller and greater nodes (according to the curr. dim.)
+          let nn = new KdNode(parent, null, currCoord); // we store nothing in this node
+          if (currCoord == 0) {
+            nn.smallerNode = build(sm, nn, lev + 1, x0, mid, y0, ye);
+            nn.greaterNode = build(gr, nn, lev + 1, mid, xe, y0, ye);
+          } else {
+            nn.smallerNode = build(sm, nn, lev + 1, x0, xe, y0, mid);
+            nn.greaterNode = build(gr, nn, lev + 1, x0, xe, mid, ye);
+          }
+          return nn;
+        }
+
+        return build(listPoints, null, 0, 0, cnv_w, 0, cnv_h);
+      }
+
+      function buildKdTree_median(
+        listPoints,
+        firstIsParallX,
+        evenHandlingUseSmaller
+      ) {
+        if (listPoints.length == 0) return null;
+
+        listPoints = listPoints.slice(); // use a clone of the list to keep the original point list for interaction
+        let dimOfs = firstIsParallX
+          ? 1 // will be used in the build function call(s)
+          : 0; // parallel to x-axis must use y-values => offset is 1, else 0
+
+        function build(pts, parent, lev) {
+          // recursive function which returns the root in each level
+          if (pts.length <= 1) return null; // stop recursion
+
+          // 1. get the median
+          let currCoord = (lev + dimOfs) % 2; // addresses x- or y-coordinate during sorting via index 0 or 1
+          pts.sort(function (a, b) {
+            return a[currCoord] - b[currCoord];
+          }); // sort according current coordinate/dimension
+          if (evenHandlingUseSmaller === undefined && pts.length % 2 == 0) {
+            // even number, but we have to take the middle
+
+            // 2. Split the list in the middle (smaller, greater). Note: splice cuts entries from the list!
+            let gr = pts.splice(pts.length / 2); // cut all smaller than median
+            let sm = pts; // use the rest (those which were greater than the median)
+            let mX = (sm[sm.length - 1][0] + gr[0][0]) / 2;
+            let mY = (sm[sm.length - 1][1] + gr[0][1]) / 2;
+
+            // 3. Create the new node nn as well as the sub-trees with the smaller and greater nodes (according to the curr. dim.)
+            let nn = new KdNode(parent, null, currCoord, [mX, mY, "mediMid"]);
+            nn.smallerNode = build(sm, nn, lev + 1);
+            nn.greaterNode = build(gr, nn, lev + 1);
+            return nn;
+          } else {
+            // can use greater or smaller
+            let medianIdx = evenHandlingUseSmaller // the median with respect to currCoord (x or y)
+              ? Math.floor((pts.length - 1) / 2) // if odd -> take smaller one
+              : Math.floor(pts.length / 2); // if odd -> take greater one
+
+            // 2. Split the list into 3 parts (smaller, median, greater). Note: splice cuts entries from the list!
+            let pt = pts.splice(medianIdx, 1)[0]; // cut sub-list which has only 1 entry (the median point)
+            let sm = pts.splice(0, medianIdx); // cut all smaller than median
+            let gr = pts; // use the rest (those which were greater than the median)
+
+            // 3. Create the new node nn as well as the sub-trees with the smaller and greater nodes (according to the curr. dim.)
+            let nn = new KdNode(parent, pt, currCoord, pt);
+            nn.smallerNode = build(sm, nn, lev + 1);
+            nn.greaterNode = build(gr, nn, lev + 1);
+            return nn;
+          }
+        }
+
+        return build(listPoints, null, 0);
+      }
+
+      function buildKdTree_increm(listPoints, firstIsParallX) {
+        if (listPoints.length == 0) return null;
+
+        let dimOfs = firstIsParallX
+          ? 1 // will be used in the build function call(s)
+          : 0; // parallel to x-axis must use y-values => offset is 1, else 0
+        let rootNode = new KdNode(null, listPoints[0], dimOfs, listPoints[0]);
+
+        for (let i = 1; i < listPoints.length; i++)
+          addToKdTree_increm(rootNode, listPoints[i]);
+
+        return rootNode;
+      }
+
+      function addToKdTree_increm(rootNode, pt) {
+        if (rootNode == null)
+          return new KdNode(null, pt, bool_XvY_isX ? 1 : 0, pt);
+
+        let n = rootNode;
+        for (;;) {
+          if (pt[n.currCoord] <= n.point[n.currCoord]) {
+            if (n.smallerNode == null) {
+              n.smallerNode = new KdNode(n, pt, (n.currCoord + 1) % 2, pt);
+              return;
+            }
+            n = n.smallerNode;
+          } else {
+            if (n.greaterNode == null) {
+              n.greaterNode = new KdNode(n, pt, (n.currCoord + 1) % 2, pt);
+              return;
+            }
+            n = n.greaterNode;
+          }
+        }
+      }
+
+      function drawTree(node) {
+        if (!node) return;
+
+        function drawSubTree(node, lev, x0, xe, y0, ye) {
+          if (!node)
+            //  || node.isLeaf())
+            return;
+
+          if (node.currCoord == 0) {
+            // used x-coord => parallel to y
+            let x = node.splitAtPt ? node.splitAtPt[0] : (x0 + xe) / 2;
+            drawLine(x, y0, x, ye, treeSepColor(lev));
+            drawSubTree(node.smallerNode, lev + 1, x0, x, y0, ye);
+            drawSubTree(node.greaterNode, lev + 1, x, xe, y0, ye);
+          } else {
+            // used y-coord => parallel to x
+            let y = node.splitAtPt ? node.splitAtPt[1] : (y0 + ye) / 2;
+            drawLine(x0, y, xe, y, treeSepColor(lev));
+            drawSubTree(node.smallerNode, lev + 1, x0, xe, y0, y);
+            drawSubTree(node.greaterNode, lev + 1, x0, xe, y, ye);
+          }
+        }
+
+        drawSubTree(node, node.level(), 0, cnv_w, 0, cnv_h);
+      }
+    </script>
+  </body>
+</html>

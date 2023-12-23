@@ -1,0 +1,116 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "BUILD",
+            "type": "shell",
+            "linux": {
+                "command": "g++",
+                "args": [
+                    "-std=c++14",
+                    "-Wall",
+                    "-Wextra",
+                    "-Wno-sign-compare",
+                    "-g3",
+                    "-D_GLIBCXX_DEBUG",
+                    "${fileDirname}/${fileBasenameNoExtension}.cpp",
+                    "-o",
+                    "${fileDirname}/${fileBasenameNoExtension}"
+                ],
+                "problemMatcher": [
+                    "$gcc"
+                ]
+            },
+            "osx": {
+                "command": "/usr/bin/clang++",
+                "args": [
+                    "-std=c++14",
+                    "-g",
+                    "${fileDirname}/${fileBasenameNoExtension}.cpp",
+                    "-o",
+                    "${fileDirname}/${fileBasenameNoExtension}"
+                ],
+                "problemMatcher": [
+                    "$gcc"
+                ]
+            },
+            "windows": {
+                "command": "cl.exe",
+                "args": [
+                    "/std:c++14",
+                    "/W4",
+                    "/Zi",
+                    "/EHsc",
+                    "/Fe:",
+                    "${fileDirname}\\${fileBasenameNoExtension}.exe",
+                    "${file}"
+                ],
+                "problemMatcher": [
+                    "$msCompile"
+                ]
+            }
+        },
+        {
+            "label": "DIFF xyz.in",
+            "type": "shell",
+            "command": "cd \"${fileDirname}\"; \"./${fileBasenameNoExtension}\" < \"${input:pickInFile}.in\" > \"${input:pickInFile}.out\"; echo \"diff \\\"${input:pickInFile}.out\\\" \\\"${input:pickInFile}.ans\\\"\"; diff \"${input:pickInFile}.out\" \"${input:pickInFile}.ans\"; exit 0;",
+            "windows": {
+                "command": ".vscode\\fcxyz.cmd \\\"${fileDirname}\\\" \\\"${fileBasenameNoExtension}\\\" \\\"${input:pickInFileWin}\\\""
+            }
+        },
+        {
+            "label": "DIFF *.in",
+            "type": "shell",
+            "command": "cd \"${fileDirname}\"; for fullfilename in *.in; do filename=${fullfilename%.*}; \"./${fileBasenameNoExtension}\" < \"${filename}.in\" > \"${filename}.out\"; echo \"diff \\\"${filename}.out\\\" \\\"${filename}.ans\\\"\"; diff \"${filename}.out\" \"${filename}.ans\"; done; exit 0;",
+            "windows": {
+                "command": "cmd /c \\\"@ECHO OFF && cd \"${fileDirname}\" && (for %f in (*.in) do \"${fileBasenameNoExtension}.exe\" < \"%~nf.in\" > \"%~nf.out\") && fc.exe /n *.out *.ans 2> nul || exit 0\\\""
+            }
+        },
+        {
+            "type": "cppbuild",
+            "label": "C/C++: g++.exe Aktive Datei kompilieren",
+            "command": "C:\\Program Files\\mingw-w64\\x86_64-8.1.0-posix-seh-rt_v6-rev0\\mingw64\\bin\\g++.exe",
+            "args": [
+                "-g",
+                "${file}",
+                "-o",
+                "${fileDirname}\\${fileBasenameNoExtension}.exe"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "detail": "Compiler: \"C:\\Program Files\\mingw-w64\\x86_64-8.1.0-posix-seh-rt_v6-rev0\\mingw64\\bin\\g++.exe\""
+        }
+    ],
+    "inputs": [
+        {
+            "id": "pickInFile",
+            "type": "command",
+            "command": "shellCommand.execute",
+            "args": {
+                "command": "for filename in *.in; do basename \"$filename\" .in; done",
+                "cwd": "${fileDirName}",
+                "useSingleResult": true,
+            },
+        },
+        {
+            "id": "pickInFileWin",
+            "type": "command",
+            "command": "shellCommand.execute",
+            "args": {
+                "command": "@ECHO OFF && for %f in (*.in) do echo %~nf",
+                "cwd": "${fileDirName}",
+                "useSingleResult": true,
+            },
+        },
+    ],
+}

@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>TU Ilmenau, GDV: Radiosity in a rectangle</title>
+    <meta
+      name="description"
+      content="Example for radiosity calculation in a rectangle depending on the shape of the rectangle"
+    />
+    <meta name="DC.Language" content="en" />
+    <style>
+      .blinkIt {
+        animation: blinkerKeys 1s linear infinite;
+      }
+      @keyframes blinkerKeys {
+        50% {
+          opacity: 0;
+        }
+      }
+    </style>
+    <script type="text/javascript">
+      var isDrag = false;
+      var dragPt = -1;
+      var rectX0 = 30;
+      var rectXE = 330;
+      var rectY0 = 10;
+      var rectYE = 110;
+      var dbgPoX = rectX0 * 0.9 + rectXE * 0.1;
+
+      var currAgl = [0, 0, 0];
+      var traFuncs = [];
+      var pickRadInPix = 10;
+      var pickRadInPixTouch = 50;
+
+      var traFunColor = [];
+      traFunColor[0] = "#FF0000";
+      traFunColor[1] = "#00FF00";
+      traFunColor[2] = "#0000FF";
+      traFunColor[3] = "#00FFFF";
+
+      var tfId2Char = [];
+      tfId2Char[0] = "R";
+      tfId2Char[1] = "G";
+      tfId2Char[2] = "B";
+
+      function getPosXY_OmS(el) {
+        var xPos = 0;
+        var yPos = 0;
+        while (el) {
+          xPos += el.offsetLeft - el.scrollLeft; //  + el.clientLeft;
+          yPos += el.offsetTop - el.scrollTop; //  + el.clientTop ;
+          el = el.offsetParent;
+        }
+        return [xPos - pageXOffset, yPos - pageYOffset];
+      }
+
+      function handleMove(ev, obj) {
+        if (!isDrag) return;
+
+        var ctx = obj.getContext("2d");
+        if (!ctx) return;
+
+        if (window.event) ev = window.event; // e.g. IE
+
+        var ev_X, ev_Y;
+        if (ev.touches) {
+          if (ev.touches.length != 1) return;
+
+          pickRadInPix = pickRadInPixTouch;
+          var currTouch = ev.touches[0];
+          if (!currTouch) return;
+
+          ev_X = currTouch.clientX;
+          ev_Y = currTouch.clientY;
+        } else {
+          ev_X = ev.clientX;
+          ev_Y = ev.clientY;
+        }
+
+        var posXY = getPosXY_OmS(obj);
+        var mX = ev_X - posXY[0];
+        var mY = obj.height - (ev_Y - posXY[1]);
+
+        let dbgRat = (dbgPoX - rectX0) / (rectXE - rectX0);
+        if (dragPt <= 0) {
+          if (pickRadInPix >= hypot(rectXE - mX, rectYE - mY)) dragPt = 1;
+          if (pickRadInPix >= Math.abs(dbgPoX - mX)) dragPt = 2;
+        }
+        if (dragPt > 0) {
+          if (dragPt == 1) {
+            rectXE = Math.max(rectX0, mX);
+            rectYE = mY;
+            dbgPoX = rectXE * dbgRat + rectX0 * (1 - dbgRat);
+          } else dbgPoX = Math.min(Math.max(mX, rectX0), rectXE);
+          ev.preventDefault();
+        }
+
+        updateAll();
+      }
+
+      function swapVis(but, idElem) {
+        let doShowNow = false;
+        if (but) {
+          let txt = but.innerHTML;
+          if (txt.startsWith("[hide]")) {
+            but.innerHTML = "[show]";
+            doShowNow = false;
+          } else if (txt.startsWith("[show]")) {
+            but.innerHTML = "[hide]";
+            doShowNow = true;
+          }
+        }
+        let elm = document.getElementById(idElem);
+        if (elm) elm.style.display = doShowNow ? "initial" : "none";
+      }
+    </script>
+  </head>
+  <body>
+    <h1>Radiosity in a rectangle</h1>
+
+    <b
+      >Introduction
+      <span onclick="swapVis(this, 'intro');"
+        >[hide]<span class="blinkIt" style="font-size: 150%"
+          >&#9754; click here</span
+        ></span
+      ></b
+    ><br />
+    <article id="intro">
+      We show how radiosity is transferred in a rectangular box from the black
+      line to the red, green and blue line.
+      <ul>
+        <li>
+          In the left (or upper) figure you see the rectangle and may
+          <b>change its shape by dragging the black point</b>. You may also
+          <b>drag the gray point for shifting the current position</b>.
+        </li>
+        <li>
+          On the right (or lower) figure you see the transfer functions where
+          the x-axis corresponds to the position of the "sending point" on the
+          black line and y-values to the amount of transferred energy from this
+          point to the red, green and blue line. Examples:
+          <ul>
+            <li>
+              At the left side of the black line the sending point is near to
+              the red line. Here half of the energy is sent to the red line.
+              This corresponds to a 90° angle which covers the read line seen
+              from the current point. The green and the blue line are covered in
+              sum by a 90° angle too. Thus 50% of the energy goes to the red
+              line.<br />
+              The green line gets less energy and the blue line (far away form
+              the sending point) gets only few energy.
+            </li>
+            <li>
+              In the middle most of the energy is sent to the green line, the
+              red and the blue one get only few energy.
+            </li>
+            <li>
+              When the rectangle is dragged into a narrow and high shape, then
+              the now short and far away green line will always get only few
+              energy.
+            </li>
+          </ul>
+        </li>
+        <li>
+          For each function the x value runs from 0 to the rectangle width (thus
+          it covers the whole black line).
+        </li>
+        <li>
+          The sum of the 3 functions is at each x-position equal to PI or 180°
+          (according to the 2D half space the energy is transferred to).
+        </li>
+        <li>
+          A form factor corresponds to the area below the function. Because
+          <ul>
+            <li>
+              the whole function area (on the right or lower figure) has a size
+              of PI*rectangeWidth and
+            </li>
+            <li>the assumption that the sum of form factors must be 1</li>
+          </ul>
+          we have to normalize the integrals of the functions with
+          1/(PI*rectangeWidth) to get correct form factors.
+        </li>
+      </ul>
+    </article>
+    <canvas
+      id="theCanvas"
+      width="400px"
+      height="400px"
+      onmousedown="isDrag=true;"
+      ontouchstart="isDrag=true;"
+      onmouseup="isDrag=false; dragPt=0;"
+      ontouchend="isDrag=false; dragPt=0;"
+      onmousemove="handleMove(event, this)"
+      ontouchmove="handleMove(event, this)"
+    ></canvas>
+    <canvas id="theFunctions" width="400px" height="400px"></canvas>
+    <br /><br />
+    <div id="dbg1"></div>
+    <br /><br />
+    <footer
+      style="
+        position: fixed;
+        bottom: 0px;
+        background-color: white;
+        padding: 10px;
+        width: 100%;
+        opacity: 0.85;
+      "
+    >
+      Ulf Döring, TU Ilmenau, June 2022
+    </footer>
+  </body>
+  <script type="text/javascript">
+    function hypot(dx, dy) {
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    function roundIt(val, dig) {
+      try {
+        var fact = Math.pow(10, dig);
+        return Math.round(val * fact) / fact;
+      } catch (e) {}
+      return val;
+    }
+
+    function d2r(a) {
+      return (a * Math.PI) / 180;
+    }
+    function r2d(a) {
+      return (a * 180) / Math.PI;
+    }
+    function r2d5(a) {
+      return roundIt(r2d(a), 5);
+    }
+    function v5(a) {
+      return roundIt(a, 5);
+    }
+    function v5x(a) {
+      let r = "" + roundIt(a, 5);
+      while (r.length < 7) r += "0";
+      return r;
+    }
+    function v4(a) {
+      return roundIt(a, 4);
+    }
+    function v_4(a) {
+      let r = roundIt(a, 4).toFixed(4);
+      return r;
+    }
+    function v3_4(a) {
+      let r = roundIt(a, 4).toFixed(4);
+      while (r.length < 8) r = " " + r;
+      return r;
+    }
+    function v3_1(a) {
+      let r = roundIt(a, 1).toFixed(1);
+      while (r.length < 5) r = " " + r;
+      return r;
+    }
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    function getIntegralValue(fncData) {
+      // we assume sorted function values
+      var ret = 0;
+      var xo, yo;
+
+      for (var dat = 0; dat < fncData.length; dat++) {
+        var datXY = fncData[dat];
+        var x = datXY[0];
+        var y = datXY[1];
+
+        if (dat > 0) ret += ((yo + y) / 2) * (x - xo);
+
+        xo = x;
+        yo = y;
+      }
+
+      return ret;
+    }
+
+    function getTransfFuncData(fn, numSam) {
+      let ret = [];
+
+      let m = rectXE - rectX0; // rectangle width
+      let n = rectYE - rectY0; // rectangle height
+
+      let ofsCalX = 0;
+      let facCalX = m / (numSam - 1);
+
+      for (var sam = 0; sam < numSam; sam++) {
+        let x = sam * facCalX + ofsCalX; // 0 ... rectWidth
+        let distTL = hypot(n, x); // distance form the current point to the top left corner of the box
+        let distTR = hypot(n, m - x); // distance form the current point to the top right corner of the box
+        let y = 0;
+        // for each x we calculate the angles in which the R, G and B line appear
+        switch (fn) {
+          case 1:
+            y = Math.acos(x / distTL);
+            break; // R
+          case 2:
+            y = Math.acos((-x * (m - x) + n * n) / distTL / distTR);
+            break; // G
+          case 3:
+            y = Math.acos((m - x) / distTR);
+            break; // B
+          case 4:
+            y =
+              Math.acos(x / distTL) + // R+G+B
+              Math.acos((-x * (m - x) + n * n) / distTL / distTR) +
+              Math.acos((m - x) / distTR);
+            break;
+        }
+        ret.push([x, y]);
+      }
+
+      let dx = rectXE - rectX0; // rectangle width
+      let dy = rectYE - rectY0; // rectangle height
+      let xL = dbgPoX - rectX0; // rectangle width
+      let xR = rectXE - dbgPoX; // rectangle height
+      let distTR = hypot(dy, xR); // distance form the current point to the top right corner of the box
+      let distTL = hypot(dy, xL); // distance form the current point to the top left corner of the box
+      currAgl[0] = (Math.acos(xL / distTL) * 180) / Math.PI;
+      currAgl[2] = (Math.acos(xR / distTR) * 180) / Math.PI;
+      currAgl[1] = 180 - currAgl[0] - currAgl[2];
+
+      return ret;
+    }
+
+    function showFunc(obj, fncData, color) {
+      var ctx = obj.getContext("2d");
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = !color ? "#000000" : color;
+
+      ctx.beginPath();
+
+      // map X: 0...rectWidth => 0...obj.width
+      var ofsVisX = 0;
+      var facVisX = obj.width / (rectXE - rectX0);
+
+      // map Y: 0...PI => obj.height...0
+      var ofsVisY = obj.height;
+      var facVisY = -obj.height / Math.PI;
+
+      for (var dat = 0; dat < fncData.length; dat++) {
+        var datXY = fncData[dat];
+        var posX = datXY[0] * facVisX + ofsVisX;
+        var posY = datXY[1] * facVisY + ofsVisY;
+        if (dat == 0) ctx.moveTo(posX, posY);
+        else ctx.lineTo(posX, posY);
+      }
+
+      ctx.stroke();
+    }
+
+    function showFunctions(obj) {
+      var ctx = obj.getContext("2d");
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, obj.width, obj.height);
+
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = "black";
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(obj.width - 1, 0);
+      ctx.lineTo(obj.width - 1, obj.height - 1);
+      ctx.lineTo(0, obj.height - 1);
+      ctx.lineTo(0, 0);
+      ctx.stroke();
+
+      for (tf = 0; tf < traFuncs.length; tf++)
+        showFunc(obj, traFuncs[tf], traFunColor[tf]);
+
+      dbgPoX;
+      ctx.strokeStyle = "gray";
+      ctx.beginPath();
+      let dbgX = ((dbgPoX - rectX0) * obj.width) / (rectXE - rectX0);
+      ctx.moveTo(dbgX, 0);
+      ctx.lineTo(dbgX, obj.height - 1);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    function fillCircle(obj, x0, y0, r, color) {
+      var ctx = obj.getContext("2d");
+      ctx.save();
+      ctx.translate(0, obj.height);
+      ctx.scale(1, -1);
+
+      ctx.fillStyle = !color ? "black" : color;
+      ctx.beginPath();
+      ctx.arc(x0, y0, r, 0, 2 * Math.PI, false);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function drawArc(obj, x0, y0, r, a1, a2, color) {
+      var ctx = obj.getContext("2d");
+      ctx.save();
+      ctx.translate(0, obj.height);
+      ctx.scale(1, -1);
+
+      ctx.strokeStyle = !color ? "black" : color;
+      ctx.beginPath();
+      ctx.arc(x0, y0, r, a1, a2, false);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    function fillArcSeg(obj, x0, y0, r, a1, a2, color) {
+      var ctx = obj.getContext("2d");
+      ctx.save();
+      ctx.translate(0, obj.height);
+      ctx.scale(1, -1);
+
+      ctx.fillStyle = !color ? "gray" : color;
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.arc(x0, y0, r, a1, a2, false);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function drawLine(obj, x0, y0, xe, ye, color, lineWidth) {
+      var ctx = obj.getContext("2d");
+      ctx.save();
+      ctx.translate(0, obj.height);
+      ctx.scale(1, -1);
+
+      ctx.lineWidth = !lineWidth ? 1 : lineWidth;
+      ctx.strokeStyle = !color ? "black" : color;
+
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.lineTo(xe, ye);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    function showText(obj, txt) {
+      var ctx = obj.getContext("2d");
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      // we assume that the obj is already "clean", or we draw over the content...
+      //   -> here we do not call: ctx.clearRect(0, 0, obj.width, obj.height);
+      ctx.font = "15px Arial";
+
+      let lines = txt
+        .replaceAll("<sup>", "^")
+        .replaceAll("</sup>", "")
+        .replaceAll("<sub>", "_")
+        .replaceAll("</sub>", "")
+        .split("<br>");
+      let y = 20;
+      for (let i = 0; i < lines.length; i++) {
+        ctx.fillText(lines[i], 10, y);
+        y += 20;
+      }
+    }
+
+    function showRect(obj) {
+      var ctx = obj.getContext("2d");
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, obj.width, obj.height);
+
+      let dx = rectXE - rectX0; // rectangle width
+      let dy = rectYE - rectY0; // rectangle height
+      let xR = rectXE - dbgPoX;
+      let xL = dbgPoX - rectX0;
+      let distTR = hypot(dy, xR); // distance form the current point to the top right corner of the box
+      let distTL = hypot(dy, xL); // distance form the current point to the top left corner of the box
+
+      let aR = Math.acos(xR / distTR);
+      let aL = Math.PI - Math.acos(xL / distTL);
+
+      fillArcSeg(obj, dbgPoX, rectY0, 30, 0, aR, "blue");
+      fillArcSeg(obj, dbgPoX, rectY0, 30, aR, aL, "green");
+      fillArcSeg(obj, dbgPoX, rectY0, 30, aL, Math.PI, "red");
+      drawArc(obj, dbgPoX, rectY0, 30, 0, aR, "black");
+      drawArc(obj, dbgPoX, rectY0, 30, aR, aL, "black");
+      drawArc(obj, dbgPoX, rectY0, 30, aL, Math.PI, "black");
+
+      ctx.lineCap = "round";
+      drawLine(obj, rectX0, rectY0, rectXE, rectY0, "black", 5);
+      drawLine(obj, rectXE, rectY0, rectXE, rectYE, traFunColor[2], 5);
+      drawLine(obj, rectXE, rectYE, rectX0, rectYE, traFunColor[1], 5);
+      drawLine(obj, rectX0, rectYE, rectX0, rectY0, traFunColor[0], 5);
+
+      fillCircle(obj, rectXE, rectYE, Math.min(20, pickRadInPix), "black");
+      fillCircle(obj, dbgPoX, rectY0, Math.min(20, pickRadInPix), "gray");
+
+      if (dragPt < 0) drawLine(obj, 15, 204, 290, 204, "#EEDD10", 30);
+
+      ctx.setLineDash([5, 15]);
+      drawLine(obj, dbgPoX, rectY0, rectX0, rectYE, "gray", 1);
+      drawLine(obj, dbgPoX, rectY0, rectXE, rectYE, "gray", 1);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    function updateAll() {
+      let FF_constFactor = 1 / Math.PI / (rectXE - rectX0);
+
+      let numSam = 100;
+      let FF_i3 = [];
+
+      let dbgFF = "";
+      let dbgPo = "";
+      let chk = 0;
+      for (tf = 0; tf < 4; tf++) {
+        traFuncs[tf] = getTransfFuncData(tf + 1, numSam);
+        if (tf >= 0 && tf <= 2) {
+          FF_i3[tf] = getIntegralValue(traFuncs[tf]) * FF_constFactor;
+          dbgFF +=
+            "FF_blackTo" + tfId2Char[tf] + " = " + v_4(FF_i3[tf]) + "<br>";
+          dbgPo +=
+            "agl_" +
+            tfId2Char[tf] +
+            " = " +
+            v3_1(+currAgl[tf]) +
+            "°;  " +
+            "FF_posTo" +
+            tfId2Char[tf] +
+            " = " +
+            v_4(+currAgl[tf] / 180) +
+            "<br>";
+          chk += FF_i3[tf];
+        }
+      }
+
+      let resultText =
+        "Formfaktors (FF) and current angles are:<br>" +
+        dbgFF +
+        " checksum of FFs is 1: " +
+        (v5(chk) == 1 ? "OK" : "BAD[" + chk + "]") +
+        "<br>" +
+        dbgPo +
+        "<br>You may drag the black or gray point below.";
+
+      let commentText =
+        "- the shown functions are the formfactors seen from <br>" +
+        "  a certain position on the black line<br>" +
+        "- FF_blackToR, FF_blackToG, and FF_blackToB are the <br>" +
+        "  integrals of the functions (drag the black point to chg)";
+
+      showRect(document.getElementById("theCanvas"));
+      showFunctions(document.getElementById("theFunctions"));
+      showText(document.getElementById("theCanvas"), resultText);
+      showText(document.getElementById("theFunctions"), commentText);
+    }
+
+    updateAll(); // make an initial draw
+  </script>
+</html>

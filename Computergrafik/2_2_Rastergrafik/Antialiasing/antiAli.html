@@ -1,0 +1,627 @@
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=windows-1252" />
+    <script type="text/javascript">
+      var polys = [];
+
+      var pts = [];
+      pts.push({ x: 10, y: 180 });
+      pts.push({ x: 195, y: 186 });
+      pts.push({ x: 100, y: 190 });
+      polys.push(pts);
+
+      pts = [];
+      pts.push({ x: 6, y: 149 });
+      pts.push({ x: 170, y: 170 });
+      pts.push({ x: 136, y: 168 });
+      polys.push(pts);
+
+      pts = [];
+      pts.push({ x: 95, y: 95 });
+      pts.push({ x: 83, y: 7 });
+      pts.push({ x: 105, y: 95 });
+      pts.push({ x: 190, y: 105 });
+      pts.push({ x: 105, y: 105 });
+      pts.push({ x: 100, y: 150 });
+      pts.push({ x: 95, y: 105 });
+      pts.push({ x: 7, y: 91 });
+      polys.push(pts);
+
+      pts = [];
+      pts.push({ x: 160, y: 10 });
+      pts.push({ x: 190, y: 40 });
+      pts.push({ x: 160, y: 70 });
+      pts.push({ x: 130, y: 40 });
+      polys.push(pts);
+
+      var epPointRadius = 4;
+      var epDragRadius = 8;
+      var currDragPt = null;
+
+      function isInSomePoly(rp) {
+        for (var i = 0; i < polys.length; i++)
+          if (isInPoly(polys[i], rp)) return true;
+        return false;
+      }
+
+      function isInPoly(ps, rp) {
+        return Math.abs(aglSum(ps, rp)) > 1e-10;
+      }
+
+      function aglSum(ps, rp) {
+        var sum = 0;
+        var n = ps.length;
+        for (var i = 0; i < n; i++) {
+          var j = (i + 1) % n;
+          var ax = ps[i].x - rp.x;
+          var bx = ps[j].x - rp.x;
+          var ay = ps[i].y - rp.y;
+          var by = ps[j].y - rp.y;
+
+          // atan2( |axb|, a*b)
+          sum += Math.atan2(ax * by - ay * bx, ax * bx + ay * by);
+        }
+        return sum;
+      }
+
+      function hypot(dx, dy) {
+        return Math.sqrt(dx * dx + dy * dy);
+      }
+
+      function getPickedPt(mX, mY) {
+        for (var p = 0; p < polys.length; p++)
+          for (var idx = 0; idx < polys[p].length; idx++)
+            if (
+              hypot(polys[p][idx].x - mX, polys[p][idx].y - mY) < epDragRadius
+            )
+              return polys[p][idx];
+        return null;
+      }
+
+      function getPosXY_OmS(el) {
+        var xPos = 0;
+        var yPos = 0;
+        while (el) {
+          xPos += el.offsetLeft - el.scrollLeft; //  + el.clientLeft;
+          yPos += el.offsetTop - el.scrollTop; //  + el.clientTop ;
+          el = el.offsetParent;
+        }
+        return [xPos, yPos];
+      }
+
+      function getEventPosXY(ev, el) {
+        var posXY = getPosXY_OmS(el);
+        return [ev.clientX - posXY[0], el.height - (ev.clientY - posXY[1])];
+      }
+
+      function handleDown(ev, obj) {
+        if (window.event) ev = window.event; // e.g. IE
+
+        var posXY = getEventPosXY(ev, obj);
+
+        var mX = posXY[0];
+        var mY = posXY[1];
+        currDragPt = getPickedPt(mX, mY);
+        if (currDragPt) return;
+
+        pts.push({ x: mX, y: mY }); // no point pick -> generate new one
+        redrawAll();
+      }
+
+      function handleUp(ev, obj) {
+        currDragPt = null;
+        redrawAll();
+      }
+
+      function handleMove(ev, obj) {
+        if (window.event) ev = window.event; // e.g. IE
+
+        var posXY = getEventPosXY(ev, obj);
+
+        var mX = posXY[0];
+        var mY = posXY[1];
+        var dbg1 = document.getElementById("dbg1");
+        if (true) {
+          dbg1.innerHTML =
+            "mouse:" + mX + ", " + mY + "<br>" + isInSomePoly({ x: mX, y: mY });
+        }
+
+        if (!currDragPt) return;
+
+        currDragPt.x = mX;
+        currDragPt.y = mY;
+
+        redrawAll();
+      }
+
+      function redraw(cnv) {
+        if (!cnv) return;
+        var ctx = cnv.getContext("2d");
+        if (!ctx) return;
+
+        // clear canvas
+        ctx.save();
+        ctx.setTransform(1, 0, 0, -1, 0, cnv.height);
+        ctx.clearRect(0, 0, cnv.width, cnv.height);
+
+        // redraw points
+        ctx.fillStyle = "black";
+        ctx.strokeStyle = "blue";
+        for (var p = 0; p < polys.length; p++)
+          for (var idx = 0; idx < polys[p].length; idx++) {
+            ctx.beginPath();
+            ctx.arc(
+              polys[p][idx].x,
+              polys[p][idx].y,
+              epPointRadius,
+              0,
+              2 * Math.PI,
+              false
+            );
+            ctx.fill();
+
+            var nxt = (idx + 1) % polys[p].length;
+            ctx.beginPath();
+            ctx.moveTo(polys[p][idx].x, polys[p][idx].y);
+            ctx.lineTo(polys[p][nxt].x, polys[p][nxt].y);
+            ctx.stroke();
+          }
+        ctx.restore();
+
+        doCalc();
+      }
+
+      function doCalc() {
+        var dbg2 = document.getElementById("dbg2");
+        if (true) {
+          dbg2.innerHTML =
+            "numPolys:" +
+            polys.length +
+            "<br>" +
+            linInterpolHex("#FF8000", "#FF0040", 1);
+        }
+
+        // ...
+      }
+
+      function hex2rgb(h) {
+        var mtc = /^#?([A-Fa-f0-9]{2})([A-Fa-f0-9]{2})([A-Fa-f0-9]{2})$/i.exec(
+          h
+        );
+        return mtc
+          ? [parseInt(mtc[1], 16), parseInt(mtc[2], 16), parseInt(mtc[3], 16)]
+          : null;
+      }
+
+      function rgb2hex(rgb) {
+        return (
+          "#" +
+          ((1 << 24) + (rgb[0] << 16) + (rgb[1] << 8) + rgb[2])
+            .toString(16)
+            .slice(1)
+        );
+      }
+
+      function linInterpolRgb(rgb1, rgb2, w1) {
+        var ret = [];
+        for (var c = 0; c < 3; c++)
+          ret[c] = (rgb1[c] * w1 + (1 - w1) * rgb2[c]) | 0;
+        return ret;
+      }
+
+      function linInterpolHex(hex1, hex2, w1) {
+        return rgb2hex(linInterpolRgb(hex2rgb(hex1), hex2rgb(hex2), w1));
+      }
+
+      function pat_MO1() {
+        // mid only (one sample in the middle of the area)
+        return [{ x: 0.5, y: 0.5 }];
+      }
+
+      function pat_4xOG() {
+        return [
+          { x: 0.25, y: 0.25 },
+          { x: 0.25, y: 0.75 },
+          { x: 0.75, y: 0.25 },
+          { x: 0.75, y: 0.75 },
+        ];
+      }
+
+      function pat_225xOG() {
+        return [
+          { x: 0.5, y: 0.5 },
+          { x: 1.0, y: 0.0 },
+        ];
+      }
+
+      function pat_quincunx() {
+        return [
+          { x: 0.0, y: 0.0, w: 1 },
+          { x: 1.0, y: 0.0, w: 1 },
+          { x: 0.5, y: 0.5, w: 4 },
+          { x: 0.0, y: 1.0, w: 1 },
+          { x: 1.0, y: 1.0, w: 1 },
+        ];
+      }
+
+      function pat_nxRnd(n) {
+        var ret = [];
+        for (var i = 0; i < n; i++)
+          ret.push({ x: Math.random(), y: Math.random() });
+        return ret;
+      }
+
+      function pat_16xRnd() {
+        return pat_nxRnd(16);
+      }
+
+      function pat_4xRG(aglDeg) {
+        var ar = (aglDeg * Math.PI) / 180;
+        var sa = Math.sin(ar);
+        var ca = Math.cos(ar);
+        var dx = 0.25;
+        var dy = 0.25;
+        var rx = ca * dx - sa * dy;
+        var ry = sa * dx + ca * dy;
+
+        return [
+          { x: 0.5 + rx, y: 0.5 + ry },
+          { x: 0.5 - ry, y: 0.5 + rx },
+          { x: 0.5 - rx, y: 0.5 - ry },
+          { x: 0.5 + ry, y: 0.5 - rx },
+        ];
+      }
+
+      var theRgAglDeg = false ? 22.5 : 26.6;
+      function pat_4xRG_var() {
+        return pat_4xRG(theRgAglDeg);
+      }
+
+      function calcColor(pat, x0, y0, dx, dy, fgc, bgc, sp) {
+        var ctr = 0;
+        var wgt = 0;
+
+        for (var s = 0; s < pat.length; s++) {
+          var w = pat[s].w ? pat[s].w : 1;
+          if (sp)
+            ctr += isInPoly(sp, {
+              x: x0 + pat[s].x * dx,
+              y: y0 + pat[s].y * dy,
+            })
+              ? w
+              : 0;
+          else
+            ctr += isInSomePoly({
+              x: x0 + pat[s].x * dx,
+              y: y0 + pat[s].y * dy,
+            })
+              ? w
+              : 0;
+          wgt += w;
+        }
+
+        var f = ctr / wgt;
+
+        if (f <= 0) return bgc;
+        if (f >= 1) return fgc;
+
+        return linInterpolHex(fgc, bgc, f);
+      }
+
+      function sampleMidOnly(x0, y0, w, h, fgc, bgc, sp) {
+        return calcColor(pat_MO1(), x0, y0, w, h, fgc, bgc, sp);
+      }
+      function sample4xOG(x0, y0, w, h, fgc, bgc, sp) {
+        return calcColor(pat_4xOG(), x0, y0, w, h, fgc, bgc, sp);
+      }
+      function sample4xRG(x0, y0, w, h, fgc, bgc, sp) {
+        return calcColor(pat_4xRG_var(), x0, y0, w, h, fgc, bgc, sp);
+      }
+
+      function lab4pat(patName) {
+        if (patName == "pat_MO1") return "1xMid";
+        if (patName == "pat_225xOG") return "2.25xOG";
+        if (patName == "pat_4xOG") return "4xOG";
+        if (patName == "pat_quincunx") return "Quinc.";
+        if (patName == "pat_4xRG_var") return "4xRG";
+        if (patName == "pat_16xRnd") return "16xRnd";
+        return patName;
+      }
+
+      function drawPixels(cnv, n) {
+        if (!cnv) return;
+        var ctx = cnv.getContext("2d");
+        if (!ctx) return;
+
+        // clear canvas
+        ctx.save();
+        ctx.setTransform(1, 0, 0, -1, 0, cnv.height);
+        ctx.clearRect(0, 0, cnv.width, cnv.height);
+
+        var dx = cnv.width / n;
+        var dy = cnv.height / n;
+
+        var fgColor = "#000000";
+        var bgColor = "#FFFFFF";
+
+        //    ctx.strokeStyle = "blue";
+
+        var aaPat = window[cnv.dataset.aapat];
+        if (typeof aaPat === "function")
+          for (var x = 0; x < n; x++)
+            for (var y = 0; y < n; y++) {
+              ctx.fillStyle = calcColor(
+                aaPat(),
+                x * dx,
+                y * dy,
+                dx,
+                dy,
+                fgColor,
+                bgColor,
+                cnv.dataset.poly
+              );
+              if (ctx.fillStyle != bgColor)
+                ctx.fillRect(x * dx, y * dy, dx, dy);
+            }
+
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.fillStyle = fgColor;
+        ctx.font = "18px serif";
+        ctx.fillText(lab4pat(cnv.dataset.aapat), 2, cnv.height - 2);
+        ctx.restore();
+      }
+
+      function redrawAll() {
+        redrawScenes();
+        redrawEdges();
+      }
+
+      function redrawScenes() {
+        redraw(document.getElementById("theCanvas"));
+        var n = 50;
+        if (currDragPt == null)
+          drawPixels(document.getElementById("img0"), 200);
+        drawPixels(document.getElementById("img1"), n);
+        drawPixels(document.getElementById("img2"), n);
+        drawPixels(document.getElementById("img3"), n);
+        drawPixels(document.getElementById("img4"), n);
+      }
+
+      function redrawEdges() {
+        if (currDragPt != null) return;
+        var d = 50;
+        showEdge(document.getElementById("imgE0"), d);
+        drawEdge(document.getElementById("imgE1"), d);
+        drawEdge(document.getElementById("imgE2"), d);
+        drawEdge(document.getElementById("imgE3"), d);
+        drawEdge(document.getElementById("imgE4"), d);
+        drawEdge(document.getElementById("imgE5"), d);
+        drawEdge(document.getElementById("imgE6"), d);
+      }
+
+      var polyEdge = [
+        { x: -600, y: -50 },
+        { x: 1200, y: -50 },
+        { x: 1200, y: 100 },
+        { x: -600, y: -50 },
+      ];
+
+      function showEdge(cnv, d) {
+        if (!cnv) return;
+        var ctx = cnv.getContext("2d");
+        if (!ctx) return;
+
+        var pat = null;
+        var aaPat = window[cnv.dataset.aapat];
+        if (typeof aaPat === "function") pat = aaPat();
+
+        // clear canvas
+        ctx.save();
+        ctx.setTransform(1, 0, 0, -1, 0, cnv.height);
+        ctx.clearRect(0, 0, cnv.width, cnv.height);
+
+        var nx = (cnv.width / d) | 0;
+        var ny = (cnv.height / d) | 0;
+
+        var fgColor = "#0000FF";
+        var bgColor = "#FFFFFF";
+
+        ctx.strokeStyle = "black";
+        ctx.fillStyle = fgColor;
+
+        ctx.beginPath();
+        ctx.moveTo(polyEdge[0].x, polyEdge[0].y);
+        for (var p = 1; p < polyEdge.length; p++) {
+          ctx.lineTo(polyEdge[p].x, polyEdge[p].y);
+        }
+        ctx.fill();
+
+        // pat=null;
+        for (var x = 0; x < nx; x++)
+          for (var y = 0; y < ny; y++) {
+            ctx.strokeRect(x * d, y * d, d, d);
+            if (pat) showSamplePoss(pat, ctx, x * d, y * d, d, d, "#FF0000");
+          }
+        ctx.restore();
+      }
+
+      function drawEdge(cnv, d) {
+        if (!cnv) return;
+        var ctx = cnv.getContext("2d");
+        if (!ctx) return;
+
+        // clear canvas
+        ctx.save();
+        ctx.setTransform(1, 0, 0, -1, 0, cnv.height);
+        ctx.clearRect(0, 0, cnv.width, cnv.height);
+
+        var nx = (cnv.width / d) | 0;
+        var ny = (cnv.height / d) | 0;
+
+        var fgColor = "#0000FF";
+        var bgColor = "#FFFFFF";
+
+        ctx.strokeStyle = "black";
+
+        var aaPat = window[cnv.dataset.aapat];
+        if (typeof aaPat === "function") {
+          var pat = aaPat();
+          for (var x = 0; x < nx; x++)
+            for (var y = 0; y < ny; y++) {
+              ctx.fillStyle = calcColor(
+                pat,
+                x * d,
+                y * d,
+                d,
+                d,
+                fgColor,
+                bgColor,
+                polyEdge
+              );
+              if (ctx.fillStyle != bgColor) ctx.fillRect(x * d, y * d, d, d);
+              if (d > 5) {
+                ctx.strokeRect(x * d, y * d, d, d);
+                showSamplePoss(pat, ctx, x * d, y * d, d, d, "#FF0000");
+              }
+            }
+        }
+        ctx.beginPath();
+        ctx.moveTo(polyEdge[0].x, polyEdge[0].y);
+        for (var p = 1; p < polyEdge.length; p++)
+          ctx.lineTo(polyEdge[p].x, polyEdge[p].y);
+        ctx.stroke();
+
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.fillStyle = "black";
+        ctx.font = "14px serif";
+        ctx.fillText(lab4pat(cnv.dataset.aapat), 2, 15);
+        ctx.restore();
+      }
+
+      function showSamplePoss(pat, ctx, x0, y0, dx, dy, fgColor) {
+        if (!pat) return;
+        var r = Math.min(dx, dy) * 0.05;
+        ctx.save();
+        ctx.fillStyle = fgColor;
+        for (var s = 0; s < pat.length; s++) {
+          ctx.beginPath();
+          ctx.arc(x0 + pat[s].x * dx, y0 + pat[s].y * dy, r, 0, 2 * Math.PI);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+    </script>
+  </head>
+  <body onload="redrawAll()">
+    <div style="display: initial">
+      <div style="position: relative; float: left; padding-right: 10px">
+        <canvas
+          id="theCanvas"
+          onmousedown="handleDown(event, this);"
+          onmouseup="handleUp  (event, this);"
+          onmousemove="handleMove(event, this);"
+          style="border: black solid 1px"
+          width="200px"
+          height="200px"
+        ></canvas>
+        <canvas
+          id="img0"
+          data-aapat="pat_4xRG_var"
+          style="border: black solid 1px"
+          width="200px"
+          height="200px"
+        ></canvas>
+      </div>
+      <div style="position: relative; float: left; width: 50%">
+        <h3>Ant-Aliasing</h3>
+        <ol>
+          <li>Make clicks in canvas to generate polygon or drag points...</li>
+        </ol>
+        <div id="dbg1"></div>
+        <br />
+        <div id="dbg2">numPolys:4<br />#ff8000</div>
+      </div>
+      <div style="clear: both"></div>
+      <hr />
+      <canvas
+        id="img1"
+        data-aapat="pat_MO1"
+        style="border: black solid 1px"
+        width="200px"
+        height="200px"
+      ></canvas>
+      <canvas
+        id="img2"
+        data-aapat="pat_4xOG"
+        style="border: black solid 1px"
+        width="200px"
+        height="200px"
+      ></canvas>
+      <canvas
+        id="img3"
+        data-aapat="pat_4xRG_var"
+        style="border: black solid 1px"
+        width="200px"
+        height="200px"
+      ></canvas>
+      <canvas
+        id="img4"
+        data-aapat="pat_quincunx"
+        style="border: black solid 1px"
+        width="200px"
+        height="200px"
+      ></canvas>
+    </div>
+    <div style="display: initial">
+      <br /><canvas
+        id="imgE0"
+        data-aapat="pat_MO1"
+        style="border: black solid 1px"
+        width="600px"
+        height="50px"
+      ></canvas>
+      <br /><canvas
+        id="imgE1"
+        data-aapat="pat_MO1"
+        style="border: black solid 1px"
+        width="600px"
+        height="50px"
+      ></canvas>
+      <br /><canvas
+        id="imgE2"
+        data-aapat="pat_225xOG"
+        style="border: black solid 1px"
+        width="600px"
+        height="50px"
+      ></canvas>
+      <br /><canvas
+        id="imgE3"
+        data-aapat="pat_quincunx"
+        style="border: black solid 1px"
+        width="600px"
+        height="50px"
+      ></canvas>
+      <br /><canvas
+        id="imgE4"
+        data-aapat="pat_4xOG"
+        style="border: black solid 1px"
+        width="600px"
+        height="50px"
+      ></canvas>
+      <br /><canvas
+        id="imgE5"
+        data-aapat="pat_4xRG_var"
+        style="border: black solid 1px"
+        width="600px"
+        height="50px"
+      ></canvas>
+      <br /><canvas
+        id="imgE6"
+        data-aapat="pat_16xRnd"
+        style="border: black solid 1px"
+        width="600px"
+        height="50px"
+      ></canvas>
+    </div>
+  </body>
+</html>

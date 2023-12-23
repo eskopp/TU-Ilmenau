@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <meta name="author" content="TU-Ilmenau, 2022-12-05">
+    <title>Phong reflection model</title>
+    <style>
+        td {
+            font-weight: bold;
+            text-align: center;
+        }
+    </style>
+    <script>
+
+        let win = {
+            vsSrc: `
+                precision highp float;
+                attribute vec4 vtxPos;                      // positions of the vertices are transfered in 3d-homog. coords
+                varying vec2 xyCoo;
+                void main() {                               // -1..+1 -> 0..1
+                    xyCoo = vtxPos.xy*0.5 + 0.5;            // this xy-position in the projection plane will be interpolated for each fragment
+                    gl_Position = vtxPos;                   // no changes -> the vertex is used directly
+                }`,
+
+            fsSrc: `
+                precision highp float;
+                uniform vec3 rflCoe;    // reflection coefficients: (ka, kd, ks) -> "material" parameters controling the reflection parts for ambient...
+                uniform vec2 winRes;    // resolution of the window
+                varying vec2 xyCoo;     // the current xy-coordinate as calculated based on the vertex shader positions during polygon filling (normalized -1..1)
+                
+                const float epsPos = 1e-3;
+                const float epsNrm = 1e-4;
+                const vec3 n1 = vec3( epsNrm,  epsNrm,  epsNrm);    // These are offsets to be used for normal approximation.
+                const vec3 n2 = vec3(-epsNrm,  epsNrm, -epsNrm);    // They may be seen as 4 of the 8 corner points of a cube 
+                const vec3 n3 = vec3( epsNrm, -epsNrm, -epsNrm);    // which have no common edge (you may also use the other 4;-) 
+                const vec3 n4 = vec3(-epsNrm, -epsNrm,  epsNrm);    // They will form a nice thetrahedron around the position 
+                                                                    // where we want  to estimate the normal.
+                float merge( float d1, float d2, float k ){  
+                    float h = clamp( 0.5 + 0.5*(d2-d1)/k, 0.0, 1.0 );
+                    return mix( d2, d1, h ) - k*h*(1.0-h);
+                }
+
+                float distToSphere( in vec3 p, in float r ){
+                    return length(p)-r;
+                }
+
+                //---------------------------------
+
+                float distToScene(in vec3 pos){
+
+                    float k  = 0.8;
+                    float d1 = distToSphere( pos-vec3(  k,   k, 0.0), 0.55 );
+                    float d2 = distToSphere( pos-vec3( -k,   k, 0.0), 0.55 );
+                    float d3 = distToSphere( pos-vec3(  k,  -k, 0.0), 0.55 );
+                    float d4 = distToSphere( pos-vec3( -k,  -k, 0.0), 0.55 );
+                    float dm = distToSphere( pos-vec3(0.0, 0.0, 0.0), 0.75 );
+
+                    float d = 1e10;
+                    float p = 0.4;
+                    return min(d, merge(merge(merge(d1,d2,p), merge(d3,d4,p), p), dm, p));
+                }
+
+                vec3 approxNormal( in vec3 pos ){ // we assume that pos is approximated with epsPos epsilon
+                    return normalize( n1*distToScene( pos+n1 )
+                                    + n2*distToScene( pos+n2 ) 
+                                    + n3*distToScene( pos+n3 ) 
+                                    + n4*distToScene( pos+n4 ) 
+                                    );
+                }
+
+                void main(){
+                    // define eye and direction from eye position to the pixel (finally the ray into the scene)
+                    const float ez = 6.0;  // pos of eye on the z-axis
+                    const float ed = 4.0;   // dispance of the projection plane from the eye
+
+                    vec3 pix = vec3((2.0*xyCoo-1.0)*vec2(winRes.x/winRes.y, 1.0), ez-ed); // position of the fragment (pixel) in our world (in front of the eye)
+                    vec3 eye = vec3( 0.0, 0.0, ez);     // the position of the eye
+                    vec3 dir = normalize(pix-eye);      // in this direction we are looking to (from eye to pixel)
+                    vec3 lgt = vec3(10.0, 2.0,  5.0);   // here is the light position
+                    vec3 mat = vec3( 0.4, 0.4,  1.0);   // the material color (used for ambient and diffuse reflection); NOTE: we assume white light
+                    
+                    float ka = rflCoe.x;    // e.g. 0.3; 
+                    float kd = rflCoe.y;    // e.g. 0.8;
+                    float ks = rflCoe.z;    // e.g. 1.0;
+                    float ksExp = 128.0;    // exponent for specular parts
+
+                    // get intersection point (encoded as parameter t) with the scene for the current pixel
+                    const float tBeg =   0.0;
+                    const float tEnd = 100.0;
+                    float t = tBeg;
+                    for( int i=0; i<64; i++ ){
+                        float h = distToScene(eye+t*dir);
+                        if( abs(h)<epsPos || t>=tEnd ) 
+                            break;
+                        t += h;
+                    }
+
+                    // calc the color at the point, where the ray hit the scene (no specular reflection -> no high lights)
+                    vec3 rgb = vec3(0.0); // assume black as background (ray did not hit the scene)
+                    if( t<tEnd ) {  // ray did hit the scene -> we can calculate an object color
+                        vec3  pos = eye + t*dir;                        // that is the intersection point
+                        vec3  nrm = approxNormal(pos);                  // the normal at the intersection point
+                        vec3  toL = normalize(lgt-pos);                 // the direction of the light (seen from current pos)
+                        float coA = dot(nrm,toL);                       // cosine of angle between normal and direction to the light
+                        vec3  toE = normalize(eye-pos);                 // the direction of the eye (seen from current pos)
+                        vec3  idR = nrm*coA*2.0-toL;                    // direction of ideal reflextion
+                        float coT = dot(idR,toE);                       // cosine of angle between ideal reflection and direction to the eye 
+                        float amb = ka;                                 // define the ambient part as constant, same for each part of the object
+                        float dif = kd*    clamp(coA, 0.0, 1.0);        // diffuse part of reflection according of the cos between normal and light, clamped to 0..1
+                        float spc = ks*pow(clamp(coT, 0.0, 1.0), ksExp);// specular part
+                        rgb = mat*(amb +dif) + vec3(spc);               // note: the material color is not used in the specular part and we assume white light
+                    }
+
+                    gl_FragColor = vec4( rgb, 1.0 );    // append 1.0 as alpha (rgb -> rgbA) 
+                }
+                    `,
+
+            init: function () {
+                this.initCanvas("cnvA", [0.3, 0.0, 0.0]);
+                this.initCanvas("cnvD", [0.0, 0.8, 0.0]);
+                this.initCanvas("cnvS", [0.0, 0.0, 1.0]);
+                this.initCanvas("cnvP", [0.3, 0.8, 1.0]);
+            },
+
+            initCanvas: function (cnvName, rflCoe) {
+                this.rflCoe = rflCoe;
+                this.cnv = document.getElementById(cnvName);
+                this.ctx = this.cnv.getContext('webgl');
+                this.prg = this.compileShader(this.vsSrc, this.fsSrc);
+                this.cor = this.ctx.createBuffer();         // we fill it soon with the coordinates of 2 triangles which cover the whole clip space 
+
+                this.ctx.bindBuffer(this.ctx.ARRAY_BUFFER, this.cor); // the clip space is normalized: -1..1 in both dimensions
+                const Q = 1.0; // changes for test only, usually we have Q=1; used as triangle coordinates in following buffer:
+                this.ctx.bufferData(this.ctx.ARRAY_BUFFER, new Float32Array([-Q, -Q, -Q, Q, Q, -Q, Q, Q]), this.ctx.STATIC_DRAW); // interpret it as TRIANGLE_STRIP 
+                this.ctx.bindBuffer(this.ctx.ARRAY_BUFFER, null);
+
+                this.render();
+            },
+
+            render: function () {
+                this.ctx.useProgram(this.prg);
+
+                //  following calls could be moved to init phase
+                const loc_rflCoe = this.ctx.getUniformLocation(this.prg, 'rflCoe');
+                const loc_winRes = this.ctx.getUniformLocation(this.prg, 'winRes');
+                const loc_vtxPos = this.ctx.getAttribLocation(this.prg, 'vtxPos');
+
+                // activate/set the current data
+                this.ctx.uniform2fv(loc_winRes, [this.cnv.width, this.cnv.height]); // it is a 2d-vector
+                this.ctx.uniform3fv(loc_rflCoe, this.rflCoe);                       // it is a 3d-vector (kAmbi, kDiff, kSpec)
+
+                this.ctx.bindBuffer(this.ctx.ARRAY_BUFFER, this.cor);
+                this.ctx.enableVertexAttribArray(loc_vtxPos);
+                this.ctx.vertexAttribPointer(loc_vtxPos, 2, this.ctx.FLOAT, false, 0, 0); // use 2 coordinates per vertex
+
+                this.ctx.drawArrays(this.ctx.TRIANGLE_STRIP, 0, 4);    // 4 vertices interpreted as triangle strip (for this.ctx.TRIANGLES we would need 6 points)
+
+                this.ctx.bindBuffer(this.ctx.ARRAY_BUFFER, null);
+                this.ctx.disableVertexAttribArray(loc_vtxPos);
+            },
+
+            framesPerSec: 1,
+
+            compileSource: function (src, type) {
+                let shader = this.ctx.createShader(type);
+                this.ctx.shaderSource(shader, src);
+                this.ctx.compileShader(shader);
+                if (this.ctx.getShaderParameter(shader, this.ctx.COMPILE_STATUS))
+                    return shader;
+                console.log('compile error: ' + this.ctx.getShaderInfoLog(shader) + ' for:\n' + this.addLineNum(src));
+                this.ctx.deleteShader(shader);
+            },
+
+            compileShader: function (vtxSrc, frgSrc) {
+                let program = this.ctx.createProgram();
+                this.ctx.attachShader(program, this.compileSource(vtxSrc, this.ctx.VERTEX_SHADER));
+                this.ctx.attachShader(program, this.compileSource(frgSrc, this.ctx.FRAGMENT_SHADER));
+                this.ctx.linkProgram(program);
+                if (this.ctx.getProgramParameter(program, this.ctx.LINK_STATUS))
+                    return program;
+                console.log('link error: ' + this.ctx.getProgramInfoLog(program));
+                this.ctx.deleteProgram(program);
+            },
+
+            addLineNum: function (txt) {
+                let r = "";
+                let a = txt.split("\n");
+                for (let i = 0; i < a.length; i++)
+                    r += (i + 1) + ": " + a[i] + "\n";
+                return r;
+            }
+        }
+
+    </script>
+</head>
+
+<body onload="win.init()">
+    <table>
+        <tr>
+            <td><canvas id="cnvC" width="200" height="200" style="background-color:#6666FF"></canvas></td>
+            <td></td>
+            <td><canvas id="cnvA" width="200" height="200"></canvas></td>
+            <td></td>
+            <td><canvas id="cnvD" width="200" height="200"></canvas></td>
+            <td></td>
+            <td><canvas id="cnvS" width="200" height="200"></canvas></td>
+            <td></td>
+            <td><canvas id="cnvP" width="200" height="200"></canvas></td>
+        </tr>
+        <tr>
+            <td>Materialfarbe </td>
+            <td>,</td>
+            <td>ambient, ka=0.3 </td>
+            <td>+</td>
+            <td>diffus, kd=0.8 </td>
+            <td>+</td>
+            <td>spiegelnd, ks=1.0</td>
+            <td>=</td>
+            <td>Phong </td>
+        </tr>
+</body>
+
+</html>
