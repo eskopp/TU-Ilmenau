@@ -1,0 +1,3 @@
+[submodule "Proseminar"]
+	path = Proseminar
+	url = https://github.com/eskopp/Proseminar.git
