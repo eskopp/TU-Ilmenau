@@ -4,3 +4,6 @@
 [submodule "Algorithmen_und_Programmieren/Robocode"]
 	path = Algorithmen_und_Programmieren/Robocode
 	url = https://github.com/eskopp/Robocode.git
+[submodule "Skripte/Informatik"]
+	path = Skripte/Informatik
+	url = https://github.com/wieerwill/Informatik
