@@ -7,3 +7,6 @@
 [submodule "Skripte/Informatik"]
 	path = Skripte/Informatik
 	url = https://github.com/wieerwill/Informatik
+[submodule "Workshop/TUI-Workshop-Ampel"]
+	path = Workshop/TUI-Workshop-Ampel
+	url = https://github.com/eskopp/TUI-Workshop-Ampel.git
