@@ -62,7 +62,7 @@
     <td>WiSe 2023</td>
     <td>@eskopp</td>
     <td>in Bearbeitung</td>
-    <td>[Link](./DL4CV)</td>
+    <td><a href="./DL4CV">Link</a></td>
   </tr>
   <tr>
     <td>RA 1</td>

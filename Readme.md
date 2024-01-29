@@ -7,7 +7,7 @@
 # TU-Ilmenau
 
 ## Inhalt
-Eine Übersicht über die hier Hinterlegten Projekte finden Sie hier: [Übersicht](./content.md)
+Eine Übersicht über die hier Hinterlegten Projekte finden Sie hier: [Übersicht](./Inhalt.md)
 
 ## Download
 
