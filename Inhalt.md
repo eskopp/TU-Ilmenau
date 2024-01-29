@@ -22,7 +22,7 @@
     <td rowspan="3">AuP</td>
     <td>Robocode</td>
     <td>WiSe 2019</td>
-    <td>@eskopp</td>
+    <td><a href="https://github.com/eskopp">@eskopp</a></td>
     <td>Submodul</td>
     <td>TBA</td>
   </tr>
@@ -44,7 +44,7 @@
     <td>CG</td>
     <td>Vorlesung&nbsp;<br>Übung</td>
     <td>WiSe 2022</td>
-    <td>@eskopp</td>
+    <td><a href="https://github.com/eskopp">@eskopp</a></td>
     <td>fertig</td>
     <td>TBA</td>
   </tr>
@@ -52,7 +52,7 @@
     <td>DB_Impl</td>
     <td>Praktikum</td>
     <td>WiSe 2022</td>
-    <td>@bolmy</td>
+    <td><a href="https://github.com/bolmy">@bolmy</a></td>
     <td>fertig</td>
     <td>TBA</td>
   </tr>
@@ -60,7 +60,7 @@
     <td>DL4CV</td>
     <td>Praktikum</td>
     <td>WiSe 2023</td>
-    <td>@eskopp</td>
+    <td><a href="https://github.com/eskopp">@eskopp</a></td>
     <td>in Bearbeitung</td>
     <td><a href="./DL4CV">Link</a></td>
   </tr>
@@ -76,7 +76,7 @@
     <td>Proseminar</td>
     <td>Paper</td>
     <td>WiSe 2023</td>
-    <td>@eskopp</td>
+    <td><a href="https://github.com/eskopp">@eskopp</a></td>
     <td>nicht online</td>
     <td>TBA</td>
   </tr>
