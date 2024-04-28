@@ -1,0 +1,124 @@
+\documentclass[%
+    12pt,
+    a4paper,
+    ngerman,
+    headheight=29.1pt,
+]{scrartcl}
+
+\usepackage[a4paper, left=2.5cm, right=2.5cm, top=3.0cm, bottom=2.5cm]{geometry}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+
+\usepackage[ngerman]{babel}
+\usepackage[headsepline]{scrlayer-scrpage}
+\usepackage[active]{srcltx}
+\usepackage{algorithm}
+\usepackage[noend]{algorithmic}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{bbm}
+\usepackage{enumerate}
+\usepackage{graphicx}
+\usepackage{ifthen}
+\usepackage{listings}
+\usepackage{struktex}
+\usepackage{xcolor}
+
+\usepackage{hyperref} % <-- ALWAYS include me last!
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%% EDIT THIS PART %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcommand{\Fach}{Mathematik für Informatiker 2 - TU Ilmenau}
+\newcommand{\Name}{Skopp, Erik}
+\newcommand{\Seminargruppe}{\today}
+\newcommand{\Matrikelnummer}{60128}
+\newcommand{\Semester}{Sommersemester 2024}
+\newcommand{\Uebungsblatt}{2} %  <-- UPDATE ME FOR EACH SHEET
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\setlength{\parindent}{0em}
+
+%%%%%%%%%%%%%%%
+%% Aufgaben-COMMAND
+\newcommand{\Aufgabe}[1]{
+  {
+  \vspace*{0.5cm}
+  \textsf{\textbf{Aufgabe #1}} \\
+  \vspace*{0.2cm}
+  }
+}
+
+\newcommand{\Loesung}[1]{
+  {
+  \vspace*{0.5cm}
+  \textsf{\textbf{Lösung #1}}\\
+  \vspace*{0.2cm}
+  }
+}
+%%%%%%%%%%%%%%
+\hypersetup{
+    pdftitle={\Fach{}: Hausaufgabe \Uebungsblatt{}},
+    pdfauthor={\Name},
+    pdfborder={0 0 0}
+}
+
+\lstset{ %
+language=java,
+basicstyle=\footnotesize\ttfamily,
+showtabs=false,
+tabsize=2,
+captionpos=b,
+breaklines=true,
+extendedchars=true,
+showstringspaces=false,
+flexiblecolumns=true,
+}
+
+\title{Hausaufgabe \Uebungsblatt{}}
+\author{\Name{}}
+
+\begin{document}
+\pagestyle{scrheadings}
+\lohead{\sffamily \Fach{} \\ \small \Name{} - \Matrikelnummer{}}
+\rohead{\sffamily \Semester{} \\   \Seminargruppe{}}
+\pagestyle{plain}
+\thispagestyle{scrheadings}
+\addtokomafont{pagehead}{\normalfont}
+\vspace*{0.2cm}
+\begin{center}
+\LARGE \sffamily \textbf{Hausaufgabe \Uebungsblatt{}}
+\end{center}
+\vspace*{0.2cm}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Insert your solutions here %%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\Aufgabe{1}
+\input{Mathe_fuer_Informatiker_II/Hausaufgaben/Hausaufgabe_2/Aufgabe_1_Aufgabe.tex}
+
+\Loesung{1}
+\input{Mathe_fuer_Informatiker_II/Hausaufgaben/Hausaufgabe_2/Aufgabe_1_Loesung}
+
+\Aufgabe{2}
+\input{Mathe_fuer_Informatiker_II/Hausaufgaben/Hausaufgabe_2/Aufgabe_2_Aufgabe}
+
+
+\Loesung{2}
+\input{Mathe_fuer_Informatiker_II/Hausaufgaben/Hausaufgabe_2/Aufgabe_2_Loesung}
+
+\Aufgabe{3}
+\input{Mathe_fuer_Informatiker_II/Hausaufgaben/Hausaufgabe_2/Aufgabe_3_Aufgabe}
+
+
+\Loesung{3}
+\input{Mathe_fuer_Informatiker_II/Hausaufgaben/Hausaufgabe_2/Aufgabe_3_Loesung}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\end{document}

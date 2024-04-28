@@ -1,0 +1,37 @@
+Gegeben sei der Vektorraum \( C^0([0, 2\pi], \mathbb{R}) \), der aus allen auf dem Intervall \( [0, 2\pi] \) stetigen Funktionen besteht, mit dem Skalarprodukt definiert als
+\[
+\langle f, g \rangle = \frac{1}{2\pi} \int_{0}^{2\pi} f(x)g(x) \, dx.
+\]
+Wir zeigen die Eigenschaften des Skalarprodukts (S1) bis (S4) wie folgt.
+
+\begin{itemize}
+    \item[\textbf{(S1) Positivität:}]
+    Für alle \( f \in C^0([0, 2\pi], \mathbb{R}) \) gilt, dass \( \langle f, f \rangle \geq 0 \) ist. Das Skalarprodukt entspricht dem Integral über das Quadrat von \( f \), welches immer nichtnegativ ist:
+    \[
+    \langle f, f \rangle = \frac{1}{2\pi} \int_{0}^{2\pi} f(x)^2 \, dx \geq 0.
+    \]
+
+    \item[\textbf{(S2) Definitheit:}]
+    Gilt \( \langle f, f \rangle = 0 \), so folgt daraus, dass \( f(x) \) fast überall auf \( [0, 2\pi] \) null sein muss. Da \( f \) stetig ist, ist \( f \) demnach überall null:
+    \[
+    \langle f, f \rangle = 0 \Rightarrow f(x) = 0 \text{ für alle } x \in [0, 2\pi].
+    \]
+
+    \item[\textbf{(S3) Symmetrie:}]
+    Das Skalarprodukt ist symmetrisch, d.h., es gilt \( \langle f, g \rangle = \langle g, f \rangle \), da das Integral über das Produkt von \( f(x) \) und \( g(x) \) unabhängig von der Reihenfolge der Funktionen ist:
+    \[
+    \langle f, g \rangle = \frac{1}{2\pi} \int_{0}^{2\pi} f(x)g(x) \, dx = \frac{1}{2\pi} \int_{0}^{2\pi} g(x)f(x) \, dx = \langle g, f \rangle.
+    \]
+
+    \item[\textbf{(S4) Linearität:}]
+    Das Skalarprodukt ist linear im ersten Argument. Für alle \( \alpha, \beta \in \mathbb{R} \) und Funktionen \( f, g, h \in C^0([0, 2\pi], \mathbb{R}) \) gilt:
+    \[
+    \langle \alpha f + \beta g, h \rangle = \alpha \langle f, h \rangle + \beta \langle g, h \rangle.
+    \]
+    Dies folgt aus den Linearitätseigenschaften des Integrals:
+    \begin{align*}
+        \langle \alpha f + \beta g, h \rangle &= \frac{1}{2\pi} \int_{0}^{2\pi} (\alpha f(x) + \beta g(x))h(x) \, dx \\
+        &= \alpha \frac{1}{2\pi} \int_{0}^{2\pi} f(x)h(x) \, dx + \beta \frac{1}{2\pi} \int_{0}^{2\pi} g(x)h(x) \, dx \\
+        &= \alpha \langle f, h \rangle + \beta \langle g, h \rangle.
+    \end{align*}
+\end{itemize}

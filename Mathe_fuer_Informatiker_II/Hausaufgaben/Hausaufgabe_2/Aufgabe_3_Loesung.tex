@@ -1,0 +1,15 @@
+
+Gegeben sei die Menge \( M = \{0, 1, 2\}^n \) der \( n \)-dimensionalen Zeilenvektoren (Worte) mit Einträgen 0, 1 oder 2. Das Abstandsmaß \( d \colon M^2 \to \mathbb{R} \), definiert durch
+\[ d(a, b) = \text{Anzahl der Stellen, an denen sich } a \text{ und } b \text{ unterscheiden,} \]
+ist eine Metrik. Um dies zu zeigen, müssen die Eigenschaften (D1) bis (D3) erfüllt sein:
+
+\begin{description}
+    \item[(D1) Nicht-Negativität und Definitheit:] 
+    Für alle \( a, b \in M \), ist \( d(a, b) \geq 0 \), da die Anzahl der unterscheidenden Stellen nicht negativ sein kann. Außerdem ist \( d(a, b) = 0 \) genau dann, wenn \( a = b \), da sich identische Worte an keiner Stelle unterscheiden.
+    
+    \item[(D2) Symmetrie:] 
+    Für alle \( a, b \in M \), gilt \( d(a, b) = d(b, a) \), da die Anzahl der unterscheidenden Stellen unabhängig von der Reihenfolge der Worte ist.
+    
+    \item[(D3) Dreiecksungleichung:] 
+    Für alle \( a, b, c \in M \), muss gelten \( d(a, c) \leq d(a, b) + d(b, c) \). Dies ist erfüllt, da jede Stelle, an der sich \( a \) und \( c \) unterscheiden, entweder eine Stelle ist, an der sich \( a \) und \( b \) unterscheiden oder eine Stelle, an der sich \( b \) und \( c \) unterscheiden (oder beide). Somit ist die Anzahl der Stellen, an denen sich \( a \) und \( c \) unterscheiden, höchstens so groß wie die Summe der Anzahlen für \( a, b \) und \( b, c \).
+\end{description}
