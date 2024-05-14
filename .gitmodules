@@ -1,6 +1,3 @@
-[submodule "Proseminar"]
-	path = Proseminar
-	url = https://github.com/eskopp/Proseminar.git
 [submodule "Algorithmen_und_Programmieren/Robocode"]
 	path = Algorithmen_und_Programmieren/Robocode
 	url = https://github.com/eskopp/Robocode.git
