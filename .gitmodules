@@ -1,9 +1,1 @@
-[submodule "Algorithmen_und_Programmieren/Robocode"]
-	path = Algorithmen_und_Programmieren/Robocode
-	url = https://github.com/eskopp/Robocode.git
-[submodule "Skripte/Informatik"]
-	path = Skripte/Informatik
-	url = https://github.com/wieerwill/Informatik
-[submodule "Workshop/TUI-Workshop-Ampel"]
-	path = Workshop/TUI-Workshop-Ampel
-	url = https://github.com/eskopp/TUI-Workshop-Ampel.git
+
