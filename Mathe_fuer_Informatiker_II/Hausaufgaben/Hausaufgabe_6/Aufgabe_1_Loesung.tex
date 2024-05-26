@@ -1,0 +1,124 @@
+Bestimmen der Eigenwerte und Eigenräume der Matrix
+\[
+A = \begin{pmatrix}
+-5 & 0 & 7 \\
+6 & 2 & -6 \\
+-4 & 0 & 6
+\end{pmatrix}
+\]
+
+1. Charakteristisches Polynom
+
+Das charakteristische Polynom \( p(\lambda) \) einer Matrix \( A \) wird durch die Determinante der Matrix \( A - \lambda I \) berechnet:
+\[
+\det(A - \lambda I) = 0
+\]
+
+Hier ist \( I \) die Einheitsmatrix:
+\[
+A - \lambda I = \begin{pmatrix}
+-5 - \lambda & 0 & 7 \\
+6 & 2 - \lambda & -6 \\
+-4 & 0 & 6 - \lambda
+\end{pmatrix}
+\]
+
+Die Determinante der Matrix \( A - \lambda I \) ist:
+\[
+\det(A - \lambda I) = \begin{vmatrix}
+-5 - \lambda & 0 & 7 \\
+6 & 2 - \lambda & -6 \\
+-4 & 0 & 6 - \lambda
+\end{vmatrix}
+\]
+
+Die Berechnung der Determinante ergibt:
+\[
+\det(A - \lambda I) = (-5 - \lambda) \begin{vmatrix}
+2 - \lambda & -6 \\
+0 & 6 - \lambda
+\end{vmatrix} + 7 \begin{vmatrix}
+6 & 2 - \lambda \\
+-4 & 0
+\end{vmatrix}
+\]
+
+\[
+= (-5 - \lambda) [(2 - \lambda)(6 - \lambda) - 0] + 7 [6 \cdot 0 - (-4)(2 - \lambda)]
+\]
+
+\[
+= (-5 - \lambda) [(2 - \lambda)(6 - \lambda)] + 7 [4(2 - \lambda)]
+\]
+
+\[
+= (-5 - \lambda) [12 - 8\lambda + \lambda^2] + 7 [8 - 4\lambda]
+\]
+
+\[
+= -60 + 40\lambda - 5\lambda^2 - 12\lambda + 8\lambda^2 + 56 - 28\lambda
+\]
+
+\[
+= 3\lambda^2 - \lambda - 4
+\]
+
+Das charakteristische Polynom ist also:
+\[
+p(\lambda) = 3\lambda^2 - \lambda - 4
+\]
+
+2. Eigenwerte
+
+Um die Eigenwerte zu finden, wird das charakteristische Polynom gleich null gesetzt:
+\[
+3\lambda^2 - \lambda - 4 = 0
+\]
+
+Lösen dieser quadratischen Gleichung ergibt die Eigenwerte:
+\[
+\lambda_1 = 2, \quad \lambda_2 = -\frac{2}{3}
+\]
+
+3. Eigenvektoren
+
+Für \(\lambda_1 = 2\):
+\[
+A - 2I = \begin{pmatrix}
+-7 & 0 & 7 \\
+6 & 0 & -6 \\
+-4 & 0 & 4
+\end{pmatrix}
+\]
+
+Lösen des Gleichungssystems \((A - 2I)\mathbf{v} = 0\) ergibt den Eigenvektor:
+\[
+\mathbf{v_1} = \begin{pmatrix}
+1 \\
+0 \\
+1
+\end{pmatrix}
+\]
+
+Für \(\lambda_2 = -\frac{2}{3}\):
+\[
+A + \frac{2}{3}I = \begin{pmatrix}
+-5 + \frac{2}{3} & 0 & 7 \\
+6 & 2 + \frac{2}{3} & -6 \\
+-4 & 0 & 6 + \frac{2}{3}
+\end{pmatrix}
+= \begin{pmatrix}
+-\frac{13}{3} & 0 & 7 \\
+6 & \frac{8}{3} & -6 \\
+-4 & 0 & \frac{20}{3}
+\end{pmatrix}
+\]
+
+Lösen des Gleichungssystems \((A + \frac{2}{3}I)\mathbf{v} = 0\) ergibt den Eigenvektor:
+\[
+\mathbf{v_2} = \begin{pmatrix}
+0 \\
+1 \\
+0
+\end{pmatrix}
+\]

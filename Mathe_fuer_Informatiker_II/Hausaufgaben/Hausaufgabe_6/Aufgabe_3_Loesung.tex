@@ -1,0 +1,36 @@
+
+Zeigen, dass gilt:
+
+\begin{enumerate}
+    \item[(a)] Die Menge \( O^+(n) = \{ A \in \mathbb{R}^{(n,n)} \mid A \text{ ist Drehmatrix} \} \) ist eine Gruppe bezüglich der Matrizenmultiplikation.
+    \item[(b)] Die Hintereinanderausführung zweier Spiegelungen (die nicht gleichzeitig Drehungen sind) ist eine Drehung.
+\end{enumerate}
+
+(a) Die Menge \( O^+(n) \) ist eine Gruppe bezüglich der Matrizenmultiplikation
+
+Eine Gruppe besteht aus einer Menge und einer Verknüpfung, die bestimmte Eigenschaften erfüllt. Um zu zeigen, dass \( O^+(n) \) mit der Matrizenmultiplikation diese Eigenschaften erfüllt, müssen die folgenden Punkte geprüft werden:
+
+\begin{itemize}
+    \item \textbf{Abgeschlossenheit:} Wenn \( A, B \in O^+(n) \), dann ist \( A \cdot B \) ebenfalls eine Drehmatrix. Da die Komposition zweier Drehungen eine Drehung ist, bleibt die Menge unter der Matrizenmultiplikation abgeschlossen.
+    \item \textbf{Assoziativität:} Die Matrizenmultiplikation ist assoziativ, d.h. für alle \( A, B, C \in O^+(n) \) gilt \( (A \cdot B) \cdot C = A \cdot (B \cdot C) \).
+    \item \textbf{Identitätselement:} Die Einheitsmatrix \( I \) ist eine Drehmatrix, die für alle \( A \in O^+(n) \) die Bedingung \( I \cdot A = A \cdot I = A \) erfüllt.
+    \item \textbf{Inverses Element:} Zu jeder Drehmatrix \( A \) existiert eine inverse Matrix \( A^{-1} \), die ebenfalls eine Drehmatrix ist, sodass \( A \cdot A^{-1} = A^{-1} \cdot A = I \).
+\end{itemize}
+
+Da alle Gruppeneigenschaften erfüllt sind, ist \( O^+(n) \) eine Gruppe bezüglich der Matrizenmultiplikation.
+
+(b) Die Hintereinanderausführung zweier Spiegelungen ist eine Drehung
+
+Betrachtet man zwei Spiegelungen an den Hyperflächen \( H_1 \) und \( H_2 \), die durch die Normalenvektoren \( \vec{n}_1 \) und \( \vec{n}_2 \) definiert sind, so sind die Spiegelungsmatrizen \( S_1 \) und \( S_2 \) orthogonale Matrizen mit Determinante -1.
+
+Die Hintereinanderausführung der beiden Spiegelungen ist gegeben durch:
+\[
+S = S_2 \cdot S_1
+\]
+
+Da beide Spiegelungen orthogonale Matrizen sind, ist das Produkt \( S \) ebenfalls eine orthogonale Matrix. Außerdem ist die Determinante des Produkts \( S \):
+\[
+\det(S) = \det(S_2) \cdot \det(S_1) = (-1) \cdot (-1) = 1
+\]
+
+Eine orthogonale Matrix mit Determinante 1 ist eine Drehmatrix. Daher ist die Hintereinanderausführung zweier Spiegelungen eine Drehung.

@@ -1,0 +1,84 @@
+Die Drehachse \(\Gamma\) muss normiert werden:
+\[
+\vec{u} = \frac{1}{\sqrt{2}} \begin{bmatrix} 1 \\ 1 \\ 0 \end{bmatrix}
+\]
+
+Die Kreuzproduktmatrix \( K \) von \(\vec{u}\) ist:
+\[
+K = \begin{bmatrix}
+0 & 0 & \frac{1}{\sqrt{2}} \\
+0 & 0 & -\frac{1}{\sqrt{2}} \\
+-\frac{1}{\sqrt{2}} & \frac{1}{\sqrt{2}} & 0
+\end{bmatrix}
+\]
+
+Die benötigten trigonometrischen Werte sind:
+\[
+\sin(\varphi) = \sin\left(\frac{\pi}{4}\right) = \frac{\sqrt{2}}{2}, \quad \cos(\varphi) = \cos\left(\frac{\pi}{4}\right) = \frac{\sqrt{2}}{2}
+\]
+
+Die Matrix \( K^2 \) ist:
+\[
+K^2 = K \cdot K = \begin{bmatrix}
+0 & 0 & \frac{1}{\sqrt{2}} \\
+0 & 0 & -\frac{1}{\sqrt{2}} \\
+-\frac{1}{\sqrt{2}} & \frac{1}{\sqrt{2}} & 0
+\end{bmatrix} \begin{bmatrix}
+0 & 0 & \frac{1}{\sqrt{2}} \\
+0 & 0 & -\frac{1}{\sqrt{2}} \\
+-\frac{1}{\sqrt{2}} & \frac{1}{\sqrt{2}} & 0
+\end{bmatrix} = \begin{bmatrix}
+-\frac{1}{2} & \frac{1}{2} & 0 \\
+\frac{1}{2} & -\frac{1}{2} & 0 \\
+0 & 0 & -1
+\end{bmatrix}
+\]
+
+Die Drehmatrix \( M \) wird dann:
+\[
+M = I + \sin(\varphi) K + (1 - \cos(\varphi)) K^2
+\]
+
+Einsetzen der Werte ergibt:
+\[
+M = \begin{bmatrix}
+1 & 0 & 0 \\
+0 & 1 & 0 \\
+0 & 0 & 1
+\end{bmatrix} + \frac{\sqrt{2}}{2} \begin{bmatrix}
+0 & 0 & \frac{1}{\sqrt{2}} \\
+0 & 0 & -\frac{1}{\sqrt{2}} \\
+-\frac{1}{\sqrt{2}} & \frac{1}{\sqrt{2}} & 0
+\end{bmatrix} + \left(1 - \frac{\sqrt{2}}{2}\right) \begin{bmatrix}
+-\frac{1}{2} & \frac{1}{2} & 0 \\
+\frac{1}{2} & -\frac{1}{2} & 0 \\
+0 & 0 & -1
+\end{bmatrix}
+\]
+
+Nach Vereinfachung ergibt sich:
+\[
+M = \begin{bmatrix}
+1 & 0 & 0 \\
+0 & 1 & 0 \\
+0 & 0 & 1
+\end{bmatrix} + \begin{bmatrix}
+0 & 0 & \frac{1}{2} \\
+0 & 0 & -\frac{1}{2} \\
+-\frac{1}{2} & \frac{1}{2} & 0
+\end{bmatrix} + \begin{bmatrix}
+-\frac{1}{2} + \frac{\sqrt{2}}{4} & \frac{1}{2} - \frac{\sqrt{2}}{4} & 0 \\
+\frac{1}{2} - \frac{\sqrt{2}}{4} & -\frac{1}{2} + \frac{\sqrt{2}}{4} & 0 \\
+0 & 0 & -\frac{1}{2} + \frac{\sqrt{2}}{4}
+\end{bmatrix}
+\]
+
+\[
+= \begin{bmatrix}
+\frac{1 + \sqrt{2}}{2} & \frac{1 - \sqrt{2}}{2} & \frac{1}{2} \\
+\frac{1 - \sqrt{2}}{2} & \frac{1 + \sqrt{2}}{2} & -\frac{1}{2} \\
+-\frac{1}{2} & \frac{1}{2} & \frac{\sqrt{2}}{2}
+\end{bmatrix}
+\]
+
+Diese Matrix \( M \) beschreibt die Drehung um die Achse \(\Gamma\) um den Winkel \(\varphi = \frac{\pi}{4}\).
