@@ -1,0 +1,25 @@
+
+Wir zeigen, dass das durch die Diagonalmatrix $D = \text{diag}(2, 4, 3)$ definierte Produkt
+\[
+\langle \mathbf{x}, \mathbf{y} \rangle := \mathbf{x}^\top D \mathbf{y}
+\]
+ein Skalarprodukt auf $\mathbb{R}^3$ ist.
+
+\subsection*{Symmetrie}
+Da $D$ eine Diagonalmatrix ist, ist sie symmetrisch, d.h., $D = D^\top$. Daher gilt:
+\[
+\langle \mathbf{x}, \mathbf{y} \rangle = \mathbf{x}^\top D \mathbf{y} = (\mathbf{x}^\top D \mathbf{y})^\top = \mathbf{y}^\top D^\top \mathbf{x} = \mathbf{y}^\top D \mathbf{x} = \langle \mathbf{y}, \mathbf{x} \rangle.
+\]
+
+\subsection*{Linearität im ersten Argument}
+Seien $a, b \in \mathbb{R}$ und $\mathbf{z} \in \mathbb{R}^3$. Dann gilt:
+\[
+\langle a\mathbf{x} + b\mathbf{z}, \mathbf{y} \rangle = (a\mathbf{x} + b\mathbf{z})^\top D \mathbf{y} = (a\mathbf{x}^\top + b\mathbf{z}^\top) D \mathbf{y} = a\mathbf{x}^\top D \mathbf{y} + b\mathbf{z}^\top D \mathbf{y} = a\langle \mathbf{x}, \mathbf{y} \rangle + b\langle \mathbf{z}, \mathbf{y} \rangle.
+\]
+
+\subsection*{Positive Definitheit}
+Für jeden Vektor $\mathbf{x} \in \mathbb{R}^3$ gilt:
+\[
+\langle \mathbf{x}, \mathbf{x} \rangle = \mathbf{x}^\top D \mathbf{x} = \sum_{i=1}^3 d_{ii} x_i^2,
+\]
+wobei $d_{ii} > 0$ die Diagonalelemente von $D$ sind. Da alle $d_{ii}$ positiv sind, ist $\langle \mathbf{x}, \mathbf{x} \rangle \geq 0$ und $\langle \mathbf{x}, \mathbf{x} \rangle = 0$ genau dann, wenn $\mathbf{x} = 0$.
